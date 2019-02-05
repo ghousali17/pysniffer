@@ -41,9 +41,7 @@ class BasicFlow:
         self.__fwdPktStats = summaryStatistics()
         self.__bwdPktStats = summaryStatistics()
         self.__flagCounts = None
-
-        # initFlags();
-
+        self.initFlags();
         self.__forwardBytes = 0
         self.__backwardBytes = 0
         self.__startActiveTime = 0
@@ -61,7 +59,7 @@ class BasicFlow:
         self.__count = self.__count + 1
 
     def printStat(self):
-    	'''
+        '''
         print '\nStart Time: {}'.format(self.__flowStartTime)
         print 'Last Time: {}'.format(self.__flowLastSeen)
         print 'Protocol: {}'.format(self.__protocol)
@@ -70,20 +68,20 @@ class BasicFlow:
         print 'backward HBytes: {}'.format(self.__bHeaderBytes)
         print 'backward Bytes: {}'.format(self.__backwardBytes)
         print 'Flow ID: {}'.format(self.__flowId)
-		'''
+        '''
     def printFinalStat(self):
-    	if len(self.__src) == 16:
-    		print ('{}'.format(self.__flowId))        
-    		print ('{}:::{}:::{}:::{}:::{}:::{}:::{}:::{}:::{}'.format(socket.inet_ntop(10,self.__src),
+        if len(self.__src) == 16:
+            print ('{}'.format(self.__flowId))        
+            print ('{}:::{}:::{}:::{}:::{}:::{}:::{}:::{}:::{}'.format(socket.inet_ntop(10,self.__src),
                 self.__srcPort, socket.inet_ntop(10,self.__dst),
                 self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount(),self.__fwdPktStats.getSum(),self.__bwdPktStats.getSum()))
 
 
-    	else:
-    		print ('{}'.format(self.__flowId))        
-    		print ('{}:::{}:::{}:::{}:::{}:::{}:::{}:::SizeFwd:{}:::SDF{}'.format(socket.inet_ntoa(self.__src),
+        else:
+            print ('{}'.format(self.__flowId))        
+            print ('{}:::{}:::{}:::{}:::{}:::{}:::{}:::SizeFwd:{}:::SDF{}:::FKPS{:.0f}'.format(socket.inet_ntoa(self.__src),
                 self.__srcPort, socket.inet_ntoa(self.__dst),
-                self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount(),self.__fwdPktStats.getSum(),self.__fwdPktStats.getSD()))
+                self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount(),self.__fwdPktStats.getSum(),self.__fwdPktStats.getSD(),self.getfPktsPerSecond()))
 
     def firstPacket(self, packetInfo):
 
@@ -156,11 +154,11 @@ class BasicFlow:
                 self.__forward.append(packetInfo)
                 self.__forwardBytes += packetInfo.getPayloadBytes()
                 if len(self.__forward) > 1:
-                	self.__forwardIAT.addValue(currentTimestamp - self.__forwardLastSeen)
+                    self.__forwardIAT.addValue(currentTimestamp - self.__forwardLastSeen)
 
                 self.__forwardLastSeen = currentTimestamp
                 if self.__min_seg_size_forward > packetInfo.getHeaderBytes():
-                	self.__min_seg_size_forward = packetInfo.getHeaderBytes()
+                    self.__min_seg_size_forward = packetInfo.getHeaderBytes()
             else:
 
                 self.__bwdPktStats.addValue(packetInfo.getPayloadBytes())
@@ -169,7 +167,7 @@ class BasicFlow:
                 self.__backward.append(packetInfo)
                 self.__backwardBytes += packetInfo.getPayloadBytes()
                 if len(self.__backward) > 1 :
-                	self.__backwardIAT.addValue(currentTimestamp - self.__backwardLastSeen)
+                    self.__backwardIAT.addValue(currentTimestamp - self.__backwardLastSeen)
 
                 self.__backwardLastSeen = currentTimestamp
         else:
@@ -186,7 +184,7 @@ class BasicFlow:
             self.__forwardLastSeen = currentTimestamp
 
             if self.__min_seg_size_forward > packetInfo.getHeaderBytes():
-                	self.__min_seg_size_forward = packetInfo.getHeaderBytes()
+                    self.__min_seg_size_forward = packetInfo.getHeaderBytes()
 
 
         self.__flowIAT.addValue(packetInfo.getTimestamp()
@@ -197,5 +195,149 @@ class BasicFlow:
         return self.__flowStartTime
 
 
+    def getfPktsPerSecond(self):
+        duration = self.__flowLastSeen - self.__flowStartTime
+        if duration == 0 :
+            return 0
+        else:
+            return (len(self.__forward)/(duration/1000000.0))
 
-			
+    def getbPktsPerSecond(self):
+        duration = self.__flowLastSeen - self.__flowStartTime
+        if duration == 0 :
+            return 0
+        else:
+            return (len(self.__backward)/(duration/1000000.0))   
+
+    def getDownUpRatio(self):           
+        if len(self.__forward) > 0:                     
+            return (float(len(self.__backward)) / float(len(self.__backward)))
+        else:
+            return 0 
+    def fAvgSegmentSize(self):
+        if len(self.__forward) > 0:
+            return (self.__fwdPktStats.getSum()/(float(len(self.__forward))))
+        else:
+            return 0
+    def bAvgSegmentSize(self):
+        if len(self.__backward) > 0:
+            return (self.__bwdPktStats.getSum()/(float(len(self.__backward))))
+        else:
+            return 0
+    
+    def initFlags(self):
+        self.__fFIN_cnt = 0
+        self.__fPSH_cnt = 0
+        self.__fURG_cnt = 0
+        self.__fECE_cnt = 0
+        self.__fSYN_cnt = 0
+        self.__fACK_cnt = 0
+        self.__fCWR_cnt = 0
+        self.__fRST_cnt = 0
+
+    def checkFlags(self,packetInfo):
+        if self.hasFlagFIN():
+            self.__fFIN_cnt += 1
+        if self.hasFlagSYN():
+            self.__fSYN_cnt += 1
+        if self.hasFlagRST():
+            self.__fRST_cnt += 1
+        if self.hasFlagPSH():
+            self.__fPSH_cnt += 1
+        if self.hasFlagACK():
+            self.__fACK_cnt += 1
+        if self.hasFlagURG():
+            self.__fURG_cnt += 1
+        if self.hasFlagECE():
+            self.__fECE_cnt += 1
+        if self.hasFlagCWR():
+            self.__fCWR_cnt += 1
+
+
+    def getFlowDuration(self):
+        return round(((self.__flowLastSeen - self.__flowStartTime) / 1000000.0), 6)
+
+    def getSrcPort(self):
+        return self.__srcPort
+
+    def getDstPort(self):
+        return self.__dstPort
+    def dumpFlowBasedFeatures(self,sep):
+        dump = ""
+        dump += str(self.__flowId)
+        dump += sep 
+        if len(self.__src) >= 16:
+            dump += socket.inet_ntop(10,self.__src)
+            dump += sep
+            dump += str(self.getSrcPort())
+            dump += sep
+            dump += socket.inet_ntop(10,self.__dst)
+            dump += sep
+            dump += str(self.getDstPort())
+            dump += sep
+        else:
+            dump += socket.inet_ntoa(self.__src)
+            dump += sep
+            dump += str(self.getSrcPort())
+            dump += sep
+            dump += str(socket.inet_ntoa(self.__dst))
+            dump += sep
+            dump += str(self.getDstPort())
+            dump += sep
+        dump += str(self.getFlowDuration())
+        dump += sep
+        dump += str(self.__fwdPktStats.getCount())
+        dump += sep
+        dump += str(self.__bwdPktStats.getCount())
+        dump += sep
+        dump += str(self.__fwdPktStats.getSum())
+        dump += sep
+        dump += str(self.__bwdPktStats.getSum())
+        dump += sep
+        if self.__fwdPktStats.getCount() > 0:
+            dump += str(self.__fwdPktStats.getMax())
+            dump += sep
+            dump += str(self.__fwdPktStats.getMin())
+            dump += sep
+            dump += str(self.__fwdPktStats.getMean())
+            dump += sep
+            dump += str(self.__fwdPktStats.getSD())
+            dump += sep
+        else:
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+
+        if self.__bwdPktStats.getCount() > 0:
+            dump += str(self.__bwdPktStats.getMax())
+            dump += sep
+            dump += str(self.__bwdPktStats.getMin())
+            dump += sep
+            dump += str(self.__bwdPktStats.getMean())
+            dump += sep
+            dump += str(self.__bwdPktStats.getSD())
+            dump += sep
+        else:
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+
+
+
+        
+        print("{}".format(dump))
+    
+    
+
+
+

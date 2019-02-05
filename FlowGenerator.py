@@ -47,7 +47,7 @@ class FlowGenerator:
                         # extra shit
 
                 print ('Flow time out')
-                self.__currentFlows[packetInfo.getFlowId()].printFinalStat()
+                self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures("||")
                 del self.__currentFlows[packetInfo.getFlowId()]
                 self.__currentFlows[packetInfo.getFlowId()] = \
                     BasicFlow(packetInfo)
@@ -59,7 +59,7 @@ class FlowGenerator:
                 #print ('Flow finished')
 
                 flow.addPacket(packetInfo)
-                self.__currentFlows[packetInfo.getFlowId()].printFinalStat()
+                self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures("||")
                 del self.__currentFlows[packetInfo.getFlowId()]
             else:
 
@@ -86,7 +86,7 @@ class FlowGenerator:
         for (key, val) in self.__currentFlows.items():
             count += 1
            
-            val.printFinalStat()
+            val.dumpFlowBasedFeatures('||')
             if count == 5:
             	break 
 
