@@ -97,10 +97,14 @@ class BasicPacketInfo():
 	def getDstPort(self):
 		return self.__dstPort
 	
-	def setDstPort(self,srcPort):
+	def setDstPort(self,dstPort):
 		self.__dstPort = dstPort
 
+	def getProtocol(self):
+		return self.__protocol
 
+	def setProtocol(self,protocol):
+		self.__protocol = protocol
 	def getTimestamp(self):
 		return self.__timestamp
 
@@ -134,9 +138,9 @@ class BasicPacketInfo():
 
 	
 	#flag function (1/8)
-	def hasFlagFin(self):
+	def hasFlagFIN(self):
 		return self.__flagFIN
-	def setFlagFin(self):
+	def setFlagFIN(self):
 		self.__flagFIN = True
 
 	def hasFlagPSH(self):

@@ -1,6 +1,7 @@
 import pcap, sys, socket 
 from BasicPacketInfo import BasicPacketInfo
 from BasicFlow import BasicFlow
+from FlowGenerator import FlowGenerator
 from struct import *
 
 print('lets go!')
@@ -52,17 +53,19 @@ def getIpv4Info(ts,pkt):
         packetInfo.setPayloadBytes(segmentLength)
         packetInfo.setHeaderBytes(segmentHeaderLength)
        
+        #print '\n' + str(packetInfo.getTimestamp())
        
     elif protocol == 17:
         udp_hdr = pkt[pktHeaderLength:pktHeaderLength + 8]
         udph = unpack('!HHHH', udp_hdr)
-        #basePacket = BasicPacketInfo(iph[8],iph[9],udph[0],udph[1],protocol,ts,1)  
+        #packetInfo = BasicPacketInfo(iph[8],iph[9],udph[0],udph[1],protocol,ts,1)  
         
 
     return packetInfo
 
 
-
+flowGen = FlowGenerator(True, 120000000, 5000000)
+    
 for ts, pkt in sniffer:
     pkt = pkt[sniffer.dloff:] #remove link layer data
     if count == 0:
@@ -87,16 +90,19 @@ for ts, pkt in sniffer:
 
     #using RFC protocol numbers to determine the protocol employed at he transport layer
     '''
-    basePacket = getIpv4Info(ts,pkt)
-    if basePacket != None:
-        basePacket.printTcp()
-        if basePacket.getFlowId() in flow_log:
-            flow_log[basePacket.getFlowId()].addPacket()
+    packetInfo = getIpv4Info(ts,pkt)
+    #true,120000000L, 5000000L
+    flowGen.addPacket(packetInfo)
+    if packetInfo != None:
+        #packetInfo.printTcp()
+        if packetInfo.getFlowId() in flow_log:
+            flow_log[packetInfo.getFlowId()].addPacket(packetInfo)
         else:
-            flow_log[basePacket.getFlowId()] = BasicFlow(basePacket)
+            flow_log[packetInfo.getFlowId()] = BasicFlow(True, packetInfo)
+            flow_log[packetInfo.getFlowId()].firstPacket(packetInfo)
     
 print ('Printing our list!')
 for key,val in flow_log.items():        
-    print key
     val.printStat()
      
+flowGen.listBasic()
