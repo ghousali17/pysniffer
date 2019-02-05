@@ -65,7 +65,8 @@ class BasicPacketInfo:
             self.__flowId = str(self.getDestinationIp()) + '-' \
                 + str(self.getSourceIp()) + '-' + str(self.__dstPort) \
                 + '-' + str(self.__srcPort) + '-' + str(self.__protocol)
-            #print ('FlowID:{}'.format(self.__flowId))
+            print ('FlowID:{}'.format(self.__flowId))
+
         return self.__flowId
 
     def dumpInfo(self):
@@ -75,17 +76,12 @@ class BasicPacketInfo:
         self.__payloadPacket = self.__payloadPacket + 0x01
         return self.__payloadPacket
 
-    def getSourceIp(self):          
-    	if len(self.__src) == 16:			
-    		return socket.inet_ntop(10, self.__src)					
-    	return socket.inet_ntoa(self.__src)  # convert to utils format
+    def getSourceIp(self):
+        return socket.inet_ntoa(self.__src)  # convert to utils format
 
     def getDestinationIp(self):
-    	if len(self.__dst) == 16:			
-    		return socket.inet_ntop(10, self.__dst)					
-    	return socket.inet_ntoa(self.__dst)  # convert to utils format
-    
-    	
+        return socket.inet_ntoa(self.__dst)
+
     def getId(self):
         return self.__id
 

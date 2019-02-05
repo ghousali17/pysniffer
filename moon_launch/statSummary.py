@@ -41,11 +41,11 @@ class summaryStatistics():
 		else:
 			return self.__sum / self.__count
 
-	def getSD(self):
+	def getVariance(self):
 		if self.__count == 0:
 			return 0
 		else:
-			return ((self.__sum2 / self.__count) - (self.getMean()*self.getMean())) ** (1/2.0)
+			return (self.__sum2 / self.__count) - self.getMean()*self.getMean()
 
 
 

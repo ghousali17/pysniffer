@@ -72,8 +72,7 @@ def getIpv4Info(ts, pkt):
         packetInfo.setTCPWindow(tcph[6])
         packetInfo.setFlags(tcph[5])
         packetInfo.setPayloadBytes(segmentLength)
-        packetInfo.setHeaderBytes(segmentHeaderLength)   
-         
+        packetInfo.setHeaderBytes(segmentHeaderLength)        
     elif protocol == 17:
                         # print '\n' + str(packetInfo.getTimestamp())
 
@@ -81,11 +80,10 @@ def getIpv4Info(ts, pkt):
         udph = unpack('!HHHH', udp_hdr)
         packetInfo = BasicPacketInfo(iph[8],iph[9],udph[0],udph[1],protocol,ts,1)
         packetInfo.setPayloadBytes(udph[2]-8)
-        #print("Size:{}".format(udph[2]-8))
         packetInfo.setHeaderBytes(8)
-        return None
+        
 
-                
+                # packetInfo = BasicPacketInfo(iph[8],iph[9],udph[0],udph[1],protocol,ts,1)
 
     return packetInfo
     
@@ -137,7 +135,6 @@ def getIpv6Info(ts, pkt):
         print ('SRCPORT:{}'.format(udph[0]))
         print ('DSTPORT:{}'.format(udph[1]))
         print()'''
-
         packetInfo.setPayloadBytes(udph[2]-8)
         packetInfo.setHeaderBytes(8)
         
@@ -168,7 +165,6 @@ for (ts, pkt) in sniffer:
 
     version_ihl = iph[0]
     version = version_ihl >> 4
-    packetInfo = None
     if version == 4:
         packetInfo = getIpv4Info(ts, pkt)
     

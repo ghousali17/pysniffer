@@ -34,11 +34,10 @@ class FlowGenerator:
 
         currentTimestamp = packetInfo.getTimestamp()
 
-       	#print ("{}".format(currentTimestamp))
-       	#print ("of size {}".format(packetInfo.getPayloadBytes()))
+        print ("{}".format(currentTimestamp))
         if packetInfo.getFlowId() in self.__currentFlows:
             flow = self.__currentFlows[packetInfo.getFlowId()]
-            #print ('Flow: {} exists'.format(packetInfo.getFlowId()))
+            print ('Flow: {} exists'.format(packetInfo.getFlowId()))
             if currentTimestamp - flow.getFlowStartTime() \
                 > self.__flowTimeout:
 
@@ -47,7 +46,6 @@ class FlowGenerator:
                         # extra shit
 
                 print ('Flow time out')
-                self.__currentFlows[packetInfo.getFlowId()].printFinalStat()
                 del self.__currentFlows[packetInfo.getFlowId()]
                 self.__currentFlows[packetInfo.getFlowId()] = \
                     BasicFlow(packetInfo)
@@ -56,19 +54,15 @@ class FlowGenerator:
                 # 1
                 # 2
 
-                #print ('Flow finished')
-
+                print ('Flow finished')
                 flow.addPacket(packetInfo)
-                self.__currentFlows[packetInfo.getFlowId()].printFinalStat()
-                del self.__currentFlows[packetInfo.getFlowId()]
             else:
 
                 # 1
                 # 2
                 # del self.__currentFlows[packetInfo.getFlowId()]
 
-               
-                #print ('flow updated')
+                print ('flow updated')
 
                 # 1
                 # 2 bull
@@ -76,19 +70,15 @@ class FlowGenerator:
                 self.__currentFlows[packetInfo.getFlowId()].addPacket(packetInfo)
         else:
 
-            #print ('Creating Flow:{}'.format(packetInfo.getFlowId()))
+            print ('Creating Flow:{}'.format(packetInfo.getFlowId()))
             self.__currentFlows[packetInfo.getFlowId()] = \
                 BasicFlow(self.__bidirectional, packetInfo)
 
     def listBasic(self):
         print ('final list')
-        count = 0
         for (key, val) in self.__currentFlows.items():
-            count += 1
-           
+            print ("{}".format(key))
             val.printFinalStat()
-            if count == 5:
-            	break 
 
 
 

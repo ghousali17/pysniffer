@@ -27,11 +27,10 @@ class BasicFlow:
         self.__srcPort = packetInfo.getSrcPort()
         self.__dstPort = packetInfo.getDstPort()
         self.firstPacket(packetInfo)
-        
 
     def initParameters(self):
-        self.__forward = []
-        self.__backward = []
+        self.__forward = None
+        self.__backward = None
         self.__flowIAT = summaryStatistics()
         self.__forwardIAT = summaryStatistics()
         self.__backwardIAT = summaryStatistics()
@@ -72,18 +71,9 @@ class BasicFlow:
         print 'Flow ID: {}'.format(self.__flowId)
 		'''
     def printFinalStat(self):
-    	if len(self.__src) == 16:
-    		print ('{}'.format(self.__flowId))        
-    		print ('{}:::{}:::{}:::{}:::{}:::{}:::{}:::{}:::{}'.format(socket.inet_ntop(10,self.__src),
-                self.__srcPort, socket.inet_ntop(10,self.__dst),
-                self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount(),self.__fwdPktStats.getSum(),self.__bwdPktStats.getSum()))
-
-
-    	else:
-    		print ('{}'.format(self.__flowId))        
-    		print ('{}:::{}:::{}:::{}:::{}:::{}:::{}:::SizeFwd:{}:::SDF{}'.format(socket.inet_ntoa(self.__src),
+        print ('{}:::{}:::{}:::{}:::{}:::{}:::{}'.format(socket.inet_ntoa(self.__src),
                 self.__srcPort, socket.inet_ntoa(self.__dst),
-                self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount(),self.__fwdPktStats.getSum(),self.__fwdPktStats.getSD()))
+                self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount()))
 
     def firstPacket(self, packetInfo):
 
@@ -94,7 +84,6 @@ class BasicFlow:
         self.__startActiveTime = packetInfo.getTimestamp()
         self.__endActiveTime = packetInfo.getTimestamp()
         self.__flowLengthStats.addValue(packetInfo.getPayloadBytes())
-        
 
         if self.__src == None:
             self.__src = packetInfo.getSrc()
@@ -113,7 +102,8 @@ class BasicFlow:
             self.__fHeaderBytes = packetInfo.getHeaderBytes()
             self.__forwardLastSeen = packetInfo.getTimestamp()
             self.__forwardBytes += packetInfo.getPayloadBytes()
-            self.__forward.append(packetInfo)
+
+             # this.backward.add(packet);
 
             if packetInfo.hasFlagPSH():
                 self.__fPSH_cnt += 1
@@ -128,7 +118,8 @@ class BasicFlow:
             self.__bHeaderBytes = packetInfo.getHeaderBytes()
             self.__backwardLastSeen = packetInfo.getTimestamp()
             self.__backwardBytes += packetInfo.getPayloadBytes()
-            self.__backward.append(packetInfo)
+
+            # this.backward.add(packet);
 
             if packetInfo.hasFlagPSH():
                 self.__fPSH_cnt += 1
@@ -153,23 +144,28 @@ class BasicFlow:
 
                 self.__fwdPktStats.addValue(packetInfo.getPayloadBytes())
                 self.__fHeaderBytes += packetInfo.getHeaderBytes()
-                self.__forward.append(packetInfo)
+
+                # 4
+
                 self.__forwardBytes += packetInfo.getPayloadBytes()
-                if len(self.__forward) > 1:
-                	self.__forwardIAT.addValue(currentTimestamp - self.__forwardLastSeen)
+
+                # 5
 
                 self.__forwardLastSeen = currentTimestamp
-                if self.__min_seg_size_forward > packetInfo.getHeaderBytes():
-                	self.__min_seg_size_forward = packetInfo.getHeaderBytes()
             else:
 
+                # self.__min_seg_size_forward =
+
                 self.__bwdPktStats.addValue(packetInfo.getPayloadBytes())
-                self.__Init_Win_bytes_backward = packetInfo.getTCPWindow()
+                self.__Init_Win_bytes_backward = \
+                    packetInfo.getTCPWindow()
                 self.__bHeaderBytes += packetInfo.getHeaderBytes()
-                self.__backward.append(packetInfo)
+
+                # 3
+
                 self.__backwardBytes += packetInfo.getPayloadBytes()
-                if len(self.__backward) > 1 :
-                	self.__backwardIAT.addValue(currentTimestamp - self.__backwardLastSeen)
+
+                # 4
 
                 self.__backwardLastSeen = currentTimestamp
         else:
@@ -179,15 +175,15 @@ class BasicFlow:
             self.__fwdPktStats.addValue(packetInfo.getPayloadBytes())
             self.__flowLengthStats.addValue(packetInfo.getPayloadBytes())
             self.__fHeaderBytes += packetInfo.getHeaderBytes()
-            self.__forward.append(packetInfo)
+
+            # 4
+
             self.__forwardBytes += packetInfo.getPayloadBytes()
             self.__forwardIAT.addValue(currentTimestamp
                     - self.__forwardLastSeen)
             self.__forwardLastSeen = currentTimestamp
 
-            if self.__min_seg_size_forward > packetInfo.getHeaderBytes():
-                	self.__min_seg_size_forward = packetInfo.getHeaderBytes()
-
+            # 6
 
         self.__flowIAT.addValue(packetInfo.getTimestamp()
                                 - self.__flowLastSeen)
