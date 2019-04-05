@@ -3,13 +3,14 @@
 
 from BasicPacketInfo import BasicPacketInfo
 from statSummary import summaryStatistics
+from datetime import datetime
 import socket
 import time 
 
 
 class BasicFlow:
 
-    Act_data_pkt_forward = 0
+    Act_data_pkt_backward = 0
 
     def __init__(self, bidirectional, packetInfo):
         self.__count = 1
@@ -71,7 +72,7 @@ class BasicFlow:
             print ('{}'.format(self.__flowId))        
             print ('{}:::{}:::{}:::{}:::{}:::{}:::{}:::SizeFwd:{}:::SDF{}:::FKPS{:.0f}'.format(socket.inet_ntoa(self.__src),
                 self.__srcPort, socket.inet_ntoa(self.__dst),
-                self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount(),self.__fwdPktStats.getSum(),self.__fwdPktStats.getSD(),self.getfPktsPerSecond()))
+                self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount(),self.__fwdPktStats.getSum(),self.__fwdPktStats.getStandardDeviation(),self.getfPktsPerSecond()))
 
     def firstPacket(self, packetInfo):
 
@@ -185,8 +186,7 @@ class BasicFlow:
                 self.__min_seg_size_forward = packetInfo.getHeaderBytes()
 
 
-        self.__flowIAT.addValue(packetInfo.getTimestamp()
-                                - self.__flowLastSeen)
+        self.__flowIAT.addValue(packetInfo.getTimestamp()- self.__flowLastSeen)
         self.__flowLastSeen = currentTimestamp
 
     def getFlowStartTime(self):
@@ -253,7 +253,7 @@ class BasicFlow:
 
 
     def getFlowDuration(self):
-        return round(((self.__flowLastSeen - self.__flowStartTime) / 1000000.0), 6)
+        return round(((self.__flowLastSeen - self.__flowStartTime)), 6)
 
     def getSrcPort(self):
         return self.__srcPort
@@ -274,19 +274,108 @@ class BasicFlow:
         dump += sep
         dump += 'Timestamp'
         dump += sep
-        dump += 'Flow Duraition'
+        dump += 'Flow Duration'
         dump += sep
-        dump += 'Tot Fwd Packet Pkts'
+        dump += 'Tot Fwd Pkts'
         dump += sep
-        dump += 'Tot Bwd Packet Pkts'
+        dump += 'Tot Bwd Pkts'
         dump += sep
-        dump += 'Totlen Fwd Packet Pkts'
+        dump += 'Totlen Fwd Pkts'
         dump += sep
-        dump += 'Totlen Bwd Packet Pkts'
+        dump += 'Totlen Bwd Pkts'
         dump += sep
+        dump += 'Fwd Pkt Len Max'
+        dump += sep
+        dump += 'Fwd Pkt Len Min'
+        dump += sep
+        dump += 'Fwd Pkt Len Mean'
+        dump += sep
+        dump += 'Fwd Pkt Len Std'
+        dump += sep
+        dump += 'Bwd Pkt Len Max'
+        dump += sep
+        dump += 'Bwd Pkt Len Min'
+        dump += sep
+        dump += 'Bwd Pkt Len Mean'
+        dump += sep
+        dump += 'Bwd Pkt Len Std'
+        dump += sep
+        
+        dump += 'Flow Byts/s'
+        dump += sep
+        dump += 'Flow Pkts/s'
+        dump += sep
+
+        dump += 'Flow IAT Mean'
+        dump += sep
+        dump += 'Flow IAT Std'
+        dump += sep
+        dump += 'Flow IAT Max'
+        dump += sep
+        dump += 'Flow IAT Min'
+        dump += sep
+
+
+        dump += 'Fwd IAT Tot'
+        dump += sep
+        dump += 'Fwd IAT Mean'
+        dump += sep
+        dump += 'Fwd IAT Std'
+        dump += sep
+        dump += 'Fwd IAT Max'
+        dump += sep
+        dump += 'Fwd IAT Min'
+        dump += sep
+
+        dump += 'Bwd IAT Tot'
+        dump += sep
+        dump += 'Bwd IAT Mean'
+        dump += sep
+        dump += 'Bwd IAT Std'
+        dump += sep
+        dump += 'Bwd IAT Max'
+        dump += sep
+        dump += 'Bwd IAT Min'
+        dump += sep
+        
+        dump += 'Fwd PSH Flags'
+        dump += sep
+        dump += 'Bwd PSH Flags'
+        dump += sep
+        dump += 'Fwd URG Flags'
+        dump += sep
+        dump += 'Bwd URG Flags'
+        dump += sep
+        
+        dump += 'Fwd Header Len'
+        dump += sep
+        dump += 'Bwd Header Len'
+        dump += sep
+        dump += 'Fwd Pkts/s'
+        dump += sep
+        dump += 'Bwd Pkts/s'
+        dump += sep
+        
+        dump += 'Pkt Len Min'
+        dump += sep
+        dump += 'Pkt Len Max'
+        dump += sep
+        dump += 'Pkt Len Mean'
+        dump += sep        
+        dump += 'Pkt Len Std'
+        dump += sep
+        dump += 'Pkt Len Var'
+        dump += sep
+
+        fileObject.write(dump)
+        fileObject.write('\n')
+    
+        
+        
 
 
     def dumpFlowBasedFeatures(self,sep,fileObject):
+        print('Dumping flow!')
         dump = ""
         dump += str(self.__flowId)
         dump += sep 
@@ -308,8 +397,8 @@ class BasicFlow:
             dump += sep
             dump += str(self.getDstPort())
             dump += sep
-        ts = time.gmtime(self.__flowStartTime)
-        dump += str(time.strftime("%Y-%m-%d %I:%M:%S %p", ts))
+        
+        dump += str(datetime.utcfromtimestamp(self.__flowStartTime/1000000).strftime('%Y-%m-%d %H:%M:%S'))
         dump += sep
         dump += str(self.getFlowDuration())
         dump += sep
@@ -322,14 +411,14 @@ class BasicFlow:
         dump += str(self.__bwdPktStats.getSum())
         dump += sep
 
-        '''if self.__fwdPktStats.getCount() > 0:
+        if self.__fwdPktStats.getCount() > 0:
             dump += str(self.__fwdPktStats.getMax())
             dump += sep
             dump += str(self.__fwdPktStats.getMin())
             dump += sep
             dump += str(self.__fwdPktStats.getMean())
             dump += sep
-            dump += str(self.__fwdPktStats.getSD())
+            dump += str(self.__fwdPktStats.getStandardDeviation())
             dump += sep
         else:
             dump += str("0")
@@ -348,7 +437,7 @@ class BasicFlow:
             dump += sep
             dump += str(self.__bwdPktStats.getMean())
             dump += sep
-            dump += str(self.__bwdPktStats.getSD())
+            dump += str(self.__bwdPktStats.getStandardDeviation())
             dump += sep
         else:
             dump += str("0")
@@ -358,14 +447,113 @@ class BasicFlow:
             dump += str("0")
             dump += sep
             dump += str("0")
-            dump += sep'''
+            dump += sep
 
+        dump += " " #str((self.__forwardBytes + self.__backwardBytes)/(self.getFlowDuration()/1000000))
+        dump += sep
+        dump += " " #str((self.__bwdPktStats.getCount()+self.__fwdPktStats.getCount())/(self.getFlowDuration()/1000000))
+        dump += sep
+        dump += str(self.__flowIAT.getMean()) 
+        dump += sep
+        dump += str(self.__flowIAT.getStandardDeviation())
+        dump += sep
+        dump += str(self.__flowIAT.getMax())
+        dump += sep
+        dump += str(self.__flowIAT.getMin())
+        dump += sep
 
+        if len(self.__forward) > 1:
+            dump += str(self.__forwardIAT.getSum())
+            dump += sep
+            dump += str(self.__forwardIAT.getMean())
+            dump += sep
+            dump += str(self.__forwardIAT.getStandardDeviation())
+            dump += sep
+            dump += str(self.__forwardIAT.getMax())
+            dump += sep
+            dump += str(self.__forwardIAT.getMin())
+            dump += sep
+        else:
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
 
+        if len(self.__backward) > 1:
+            dump += str(self.__backwardIAT.getSum())
+            dump += sep
+            dump += str(self.__backwardIAT.getMean())
+            dump += sep
+            dump += str(self.__backwardIAT.getStandardDeviation())
+            dump += sep
+            dump += str(self.__backwardIAT.getMax())
+            dump += sep
+            dump += str(self.__backwardIAT.getMin())
+            dump += sep
+        else:
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+
+        dump += str(self.__fPSH_cnt)
+        dump += sep
+        dump += str(self.__bPSH_cnt)
+        dump += sep
+        dump += str(self.__fURG_cnt)
+        dump += sep
+        dump += str(self.__bURG_cnt)
+        dump += sep
+
+        dump += str(self.__fHeaderBytes)
+        dump += sep
+        dump += str(self.__bHeaderBytes)
+        dump += sep
+        dump += str(self.getfPktsPerSecond())
+        dump += sep
+        dump += str(self.getfPktsPerSecond())
+        dump += sep
+
+        if len(self.__forward) > 0 or len(self.__backward) > 0:
+            dump += str(self.__flowLengthStats.getMin())
+            dump += sep
+            dump += str(self.__flowLengthStats.getMax())
+            dump += sep
+            dump += str(self.__flowLengthStats.getMean())
+            dump += sep
+            dump += str(self.__flowLengthStats.getStandardDeviation())
+            dump += sep
+            dump += str(self.__flowLengthStats.getVariance())
+            dump += sep
+
+        else:
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            
         
         print("{}".format(dump))
-        #fileObject.write(dump)
-        #fileObject.write('\n')
+        fileObject.write(dump)
+        fileObject.write('\n')
     
 
 

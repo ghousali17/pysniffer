@@ -20,7 +20,7 @@ class BasicPacketInfo:
         ):
 
     # Info to generate flows from packers (8/8)
-        print('Packet Info constructor called!')
+     
         self.__id = 1 #generator.nextId()
         self.__src = src
         self.__dst = dst
@@ -64,7 +64,6 @@ class BasicPacketInfo:
             self.__flowId = self.getSourceIp() + "-" + self.getDestinationIp() + "-" + str(self.__srcPort) + "-" + str(self.__dstPort) + "-" + str(self.__protocol)
         else:
             self.__flowId = self.getDestinationIp() + "-" + self.getSourceIp() + "-" + str(self.__dstPort) + "-" + str(self.__srcPort) + "-" + str(self.__protocol)
-        print('flowId:' + self.__flowId)
         return self.__flowId
 
 

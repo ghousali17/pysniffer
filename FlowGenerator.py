@@ -22,7 +22,9 @@ class FlowGenerator:
         self.__flowTimeout = flowTimeout
         self.__activityTimeout = activityTimeout
         self.init()
+        self.__header = 0
         self.fileObject = open("myfile.csv","w")
+
 
     def init(self):
         self.__flowCount = 0 
@@ -31,8 +33,13 @@ class FlowGenerator:
         self.__IpAddresses = {}
 
     def addPacket(self, packetInfo):
+
         if packetInfo == None:
             return
+        if self.__header == 0:
+            self.__header = 1
+            test = BasicFlow(self.__bidirectional,packetInfo)
+            test.dumpFileHeadings(',',self.fileObject)
 
 
         currentTimestamp = packetInfo.getTimestamp()
@@ -41,7 +48,7 @@ class FlowGenerator:
             #print('Flow exists:{}'.format(packetInfo.getFlowId()))
             flow = self.__currentFlows[packetInfo.getFlowId()]
             #print ('Flow: {} exists'.format(packetInfo.getFlowId()))
-            if currentTimestamp - flow.getFlowStartTime()> self.__flowTimeout:
+            if currentTimestamp - flow.getFlowStartTime() > self.__flowTimeout:
 
                 # flow count
                     # flow listener
@@ -50,7 +57,7 @@ class FlowGenerator:
                 print ('Flow time out')
                 self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures(",",self.fileObject)
                 del self.__currentFlows[packetInfo.getFlowId()]
-                self.__currentFlows[packetInfo.getFlowId()] =  BasicFlow(packetInfo)
+                self.__currentFlows[packetInfo.getFlowId()] =  BasicFlow(self.__bidirectional,packetInfo)
             elif packetInfo.hasFlagFIN():
 
                 # 1

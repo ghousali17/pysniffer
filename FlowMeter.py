@@ -26,6 +26,7 @@ class FlowMeter():
 		weirdcount = 0
 		preprocess = Sniffer(10)
 		packetInfo = None
+		header = 0 
 		sniffer = pcap.pcap(name='6.pcap', promisc=True, immediate=True,timeout_ms=12000000000)
 
 	# initialises address structure helps in printing
@@ -35,6 +36,8 @@ class FlowMeter():
 
 	# loop that process packet as soon as they are caught by sniffer
 		for (ts, pkt) in sniffer:
+			ts = ts * 1000000
+
 			count = count + 1
 			pkt = pkt[sniffer.dloff:]  # remove link layer data
 		
@@ -45,9 +48,11 @@ class FlowMeter():
 			version = version_ihl >> 4
 		
 			packetInfo = None
+
 			if version == 4:
 				ip4count = ip4count + 1 
 				packetInfo = flowProc.getIpv4Info(ts, pkt)
+
 				if packetInfo.getProtocol() == 17:
 					ip4udp = ip4udp + 1 
 				elif packetInfo.getProtocol() == 6:
@@ -59,9 +64,6 @@ class FlowMeter():
 			else:
 				weirdcount = weirdcount + 1
 	
-
-
-
 			flowGen.addPacket(packetInfo)
 	
 		print ('Printing our list!')
