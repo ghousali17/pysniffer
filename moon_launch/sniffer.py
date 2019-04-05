@@ -72,7 +72,9 @@ def getIpv4Info(ts, pkt):
         packetInfo.setTCPWindow(tcph[6])
         packetInfo.setFlags(tcph[5])
         packetInfo.setPayloadBytes(segmentLength)
-        packetInfo.setHeaderBytes(segmentHeaderLength)        
+        packetInfo.setHeaderBytes(segmentHeaderLength) 
+        packetInfo = None  
+         
     elif protocol == 17:
                         # print '\n' + str(packetInfo.getTimestamp())
 
@@ -80,10 +82,18 @@ def getIpv4Info(ts, pkt):
         udph = unpack('!HHHH', udp_hdr)
         packetInfo = BasicPacketInfo(iph[8],iph[9],udph[0],udph[1],protocol,ts,1)
         packetInfo.setPayloadBytes(udph[2]-8)
+        #print("Size:{}".format(udph[2]-8))
         packetInfo.setHeaderBytes(8)
+        #packetInfo = None 
+        #x = checksum(udp_hdr)
+        #if x !=0:
+            #print("checksum:::::::::{}".format(checksum(ip_hdr)))
+            #packetInfo = None
+        
         
 
-                # packetInfo = BasicPacketInfo(iph[8],iph[9],udph[0],udph[1],protocol,ts,1)
+
+                
 
     return packetInfo
     
@@ -120,7 +130,7 @@ def getIpv6Info(ts, pkt):
         packetInfo.setFlags(tcph[5])
         packetInfo.setPayloadBytes(segmentLength)
         packetInfo.setHeaderBytes(segmentHeaderLength)
-        return None
+        packetInfo =  None
     elif protocol == 17:
         udp_hdr = pkt[pktHeaderLength:pktHeaderLength + 8]
         udph = unpack('!HHHH', udp_hdr)
@@ -135,60 +145,69 @@ def getIpv6Info(ts, pkt):
         print ('SRCPORT:{}'.format(udph[0]))
         print ('DSTPORT:{}'.format(udph[1]))
         print()'''
+
         packetInfo.setPayloadBytes(udph[2]-8)
         packetInfo.setHeaderBytes(8)
         
-        return packetInfo
+    
     
 
 
     
-    return None
+    return packetInfo
 
 #b = 4 , s = 8 , h =16 
-
+def checksum(msg):
+    s = 0
+    # loop taking 2 characters at a time
+    for i in range(0, len(msg), 2):
+        w = (msg[i] << 8) + (msg[i+1] )
+        s = s + w
+     
+    s = (s>>16) + (s & 0xffff);
+    #s = s + (s >> 16);
+    #complement and mask to 4 byte short
+    s = ~s & 0xffff
+     
+    return s
+ 
 
 
 flowGen = FlowGenerator(True, 120000000, 5000000)
 count = 0
 for (ts, pkt) in sniffer:
     pkt = pkt[sniffer.dloff:]  # remove link layer data
-    if count == 0:
-        st = ts
-        ts = 0
-        count = 10
-    else:
-        ts = ts - st
+    #if count == 0:
+    #    st = ts
+    #    ts = 0
+    #    count = 10
+    #else:
+    #    ts = ts - st
 
     ip_hdr = pkt[0:20]
     iph = unpack('!BBHHHBBH4s4s', ip_hdr)
 
     version_ihl = iph[0]
     version = version_ihl >> 4
+    packetInfo = None
     if version == 4:
+        #x = checksum([bytes(iph[0])])
+        x = checksum(ip_hdr)
+        if x != 0:
+            print("checksum{}".format(checksum(ip_hdr)))
+
         packetInfo = getIpv4Info(ts, pkt)
+    #else:
+        #print("Rejection")
     
 
 
     # true,120000000L, 5000000L
 
     flowGen.addPacket(packetInfo)
-    if packetInfo != None:
 
-        # packetInfo.printTcp()
-
-        if packetInfo.getFlowId() in flow_log:
-            flow_log[packetInfo.getFlowId()].addPacket(packetInfo)
-        else:
-            flow_log[packetInfo.getFlowId()] = BasicFlow(True,
-                    packetInfo)
-            flow_log[packetInfo.getFlowId()].firstPacket(packetInfo)
-            count += 1
-            if count == 200:
-                break
 print ('Printing our list!')
-for (key, val) in flow_log.items():
-    val.printStat()
+
 
 flowGen.listBasic()
 

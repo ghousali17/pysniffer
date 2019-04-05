@@ -1,0 +1,16 @@
+'''dest_mac, src_mac, eth_proto, eth_data = preprocess.ethernet_frame(pkt)
+
+		if eth_proto == 8:
+			ip4count = ip4count + 1 
+			version, header_length, ttl, ip_proto, src_ip, dest_ip, ip_data = preprocess.ipv4_packet(eth_data)
+			if ip_proto == 6:
+				ip4tcp = ip4tcp + 1
+
+			elif ip_proto == 17:
+				ip4udp = ip4udp + 1
+				src_port,dest_port, size, data = preprocess.udp_segment(ip_data)
+			else:
+				ip4weird = ip4weird + 1
+
+		elif eth_proto == 56710:
+			ip6count = ip6count + 1

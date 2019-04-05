@@ -4,6 +4,7 @@
 from BasicPacketInfo import BasicPacketInfo
 from statSummary import summaryStatistics
 import socket
+import time 
 
 
 class BasicFlow:
@@ -14,19 +15,21 @@ class BasicFlow:
         self.__count = 1
 
         # non-static
-
+        self.initParameters()
+        self.__isBidirectional = bidirectional
+        self.__min_seg_size_forward = -1
         self.__Act_data_pkt_forward = 0
         self.__Init_Win_bytes_forward = -1
         self.__Init_Win_bytes_backward = -1
-
-        self.initParameters()
+        self.__src = None
+        self.__dst = None
+        self.__srcPort = None
+        self.__dstPort = None
+        
         self.__flowStartTime = 0
-        self.__isBidirectional = bidirectional
-        self.__src = packetInfo.getSrc()
-        self.__dst = packetInfo.getDst()
-        self.__srcPort = packetInfo.getSrcPort()
-        self.__dstPort = packetInfo.getDstPort()
+        
         self.firstPacket(packetInfo)
+        
         
 
     def initParameters(self):
@@ -55,20 +58,7 @@ class BasicFlow:
         self.__fHeaderBytes = 0
         self.__bHeaderBytes = 0
 
-    def addPacket(self):
-        self.__count = self.__count + 1
 
-    def printStat(self):
-        '''
-        print '\nStart Time: {}'.format(self.__flowStartTime)
-        print 'Last Time: {}'.format(self.__flowLastSeen)
-        print 'Protocol: {}'.format(self.__protocol)
-        print 'forward HBytes: {}'.format(self.__fHeaderBytes)
-        print 'forward Bytes: {}'.format(self.__forwardBytes)
-        print 'backward HBytes: {}'.format(self.__bHeaderBytes)
-        print 'backward Bytes: {}'.format(self.__backwardBytes)
-        print 'Flow ID: {}'.format(self.__flowId)
-        '''
     def printFinalStat(self):
         if len(self.__src) == 16:
             print ('{}'.format(self.__flowId))        
@@ -93,16 +83,15 @@ class BasicFlow:
         self.__endActiveTime = packetInfo.getTimestamp()
         self.__flowLengthStats.addValue(packetInfo.getPayloadBytes())
         
-
         if self.__src == None:
             self.__src = packetInfo.getSrc()
-            self.srcPort = packetInfo.getSrcPort()
+            self.__srcPort = packetInfo.getSrcPort()
 
         if self.__dst == None:
             self.__dst = packetInfo.getDst()
-            self.dstPort = packetInfo.getDstPort()
+            self.__dstPort = packetInfo.getDstPort()
 
-        if self.__src == packetInfo.getSrc():
+        if self.__src == packetInfo.getSrc:
 
             self.__min_seg_size_forward = packetInfo.getHeaderBytes()
             Init_Win_bytes_forward = packetInfo.getTCPWindow()
@@ -119,7 +108,7 @@ class BasicFlow:
             if packetInfo.hasFlagURG():
                 self.__fURG_cnt += 1
         else:
-
+            #print('Started with Rever=========================================================================')
             Init_Win_bytes_backward = packetInfo.getTCPWindow()
             self.__flowLengthStats.addValue(packetInfo.getPayloadBytes())
             self.__bwdPktStats.addValue(packetInfo.getPayloadBytes())
@@ -143,6 +132,7 @@ class BasicFlow:
         currentTimestamp = packetInfo.getTimestamp()
 
         if self.__isBidirectional:
+            #print('Flow is BI')
 
             self.__flowLengthStats.addValue(packetInfo.getPayloadBytes())
             if self.__src == packetInfo.getSrc():
@@ -157,10 +147,16 @@ class BasicFlow:
                     self.__forwardIAT.addValue(currentTimestamp - self.__forwardLastSeen)
 
                 self.__forwardLastSeen = currentTimestamp
-                if self.__min_seg_size_forward > packetInfo.getHeaderBytes():
-                    self.__min_seg_size_forward = packetInfo.getHeaderBytes()
-            else:
 
+
+                if self.__min_seg_size_forward != None:
+                    if self.__min_seg_size_forward > packetInfo.getHeaderBytes():
+                        self.__min_seg_size_forward = packetInfo.getHeaderBytes()
+                else:
+                    self.__min_seg_size_forward = packetInfo.getHeaderBytes()
+
+            else:
+                #print('Reverse met!')
                 self.__bwdPktStats.addValue(packetInfo.getPayloadBytes())
                 self.__Init_Win_bytes_backward = packetInfo.getTCPWindow()
                 self.__bHeaderBytes += packetInfo.getHeaderBytes()
@@ -171,7 +167,7 @@ class BasicFlow:
 
                 self.__backwardLastSeen = currentTimestamp
         else:
-
+            #print("================================================================================")
             if packetInfo.getPayloadBytes >= 1:
                 self.__Act_data_pkt_forward += 1
             self.__fwdPktStats.addValue(packetInfo.getPayloadBytes())
@@ -182,9 +178,11 @@ class BasicFlow:
             self.__forwardIAT.addValue(currentTimestamp
                     - self.__forwardLastSeen)
             self.__forwardLastSeen = currentTimestamp
-
-            if self.__min_seg_size_forward > packetInfo.getHeaderBytes():
+            if self.__min_seg_size_forward != None:
+                if self.__min_seg_size_forward > packetInfo.getHeaderBytes():
                     self.__min_seg_size_forward = packetInfo.getHeaderBytes()
+            else:
+                self.__min_seg_size_forward = packetInfo.getHeaderBytes()
 
 
         self.__flowIAT.addValue(packetInfo.getTimestamp()
@@ -262,7 +260,33 @@ class BasicFlow:
 
     def getDstPort(self):
         return self.__dstPort
-    def dumpFlowBasedFeatures(self,sep):
+    def dumpFileHeadings(self, sep, fileObject):
+        dump = ""
+        dump += str('Flow ID')
+        dump += sep 
+        dump += 'Src IP'
+        dump += sep
+        dump += 'Src Port'
+        dump += sep
+        dump += 'Dst IP'
+        dump += sep
+        dump += 'Dst Port'
+        dump += sep
+        dump += 'Timestamp'
+        dump += sep
+        dump += 'Flow Duraition'
+        dump += sep
+        dump += 'Tot Fwd Packet Pkts'
+        dump += sep
+        dump += 'Tot Bwd Packet Pkts'
+        dump += sep
+        dump += 'Totlen Fwd Packet Pkts'
+        dump += sep
+        dump += 'Totlen Bwd Packet Pkts'
+        dump += sep
+
+
+    def dumpFlowBasedFeatures(self,sep,fileObject):
         dump = ""
         dump += str(self.__flowId)
         dump += sep 
@@ -284,6 +308,9 @@ class BasicFlow:
             dump += sep
             dump += str(self.getDstPort())
             dump += sep
+        ts = time.gmtime(self.__flowStartTime)
+        dump += str(time.strftime("%Y-%m-%d %I:%M:%S %p", ts))
+        dump += sep
         dump += str(self.getFlowDuration())
         dump += sep
         dump += str(self.__fwdPktStats.getCount())
@@ -294,7 +321,8 @@ class BasicFlow:
         dump += sep
         dump += str(self.__bwdPktStats.getSum())
         dump += sep
-        if self.__fwdPktStats.getCount() > 0:
+
+        '''if self.__fwdPktStats.getCount() > 0:
             dump += str(self.__fwdPktStats.getMax())
             dump += sep
             dump += str(self.__fwdPktStats.getMin())
@@ -330,13 +358,14 @@ class BasicFlow:
             dump += str("0")
             dump += sep
             dump += str("0")
-            dump += sep
+            dump += sep'''
 
 
 
         
         print("{}".format(dump))
-    
+        #fileObject.write(dump)
+        #fileObject.write('\n')
     
 
 

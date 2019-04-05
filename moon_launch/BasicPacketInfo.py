@@ -3,7 +3,30 @@
 import pcap
 import sys
 import socket
+import struct 
 
+
+def bytes_to_int(bytes):
+    result = 0
+
+    for b in bytes:
+        #print('Int value:'.format (int(b)))
+        result = result * 256 + int(b)
+    return result
+
+def byte_shifter(bytes):
+    zero = bytes[0]
+    one = bytes[1]
+    two = bytes[2]
+    three = bytes[3]
+
+    result = [three,three, one, zero]
+    '''result[0] = two
+    result[1] = three
+    result[2] = zero
+    result[3] = one'''
+
+    return result 
 
 class BasicPacketInfo:
 
@@ -19,7 +42,8 @@ class BasicPacketInfo:
         ):
 
     # Info to generate flows from packers (8/8)
-
+        self.__flowSrc = None
+        self.__isForward = True
         self.__id = generator
         self.__src = src
         self.__dst = dst
@@ -29,6 +53,7 @@ class BasicPacketInfo:
         self.__timestamp = timestamp
         self.generateFlowId()
         self.__payloadBytes = 0
+        
 
     # Flags (8/8)
 
@@ -49,23 +74,63 @@ class BasicPacketInfo:
 
     def generateFlowId(self):
         forward = True
-
-        for i in range(len(self.__src)):
-            if bytes(self.__src[i]) != bytes(self.__dst[i]):
-                if bytes(self.__src[i]) > bytes(self.__dst[i]):  # if the difference bit of src is greater we consider it incoming
+        #print('Length{}'.format(len(self.__src)))
+        srcTemp = self.__src
+        dstTemp = self.__dst
+        #self.__src = byte_shifter(self.__src) #struct.pack('>L', bytes_to_int(self.__src))
+        #self.__dst = byte_shifter(self.__dst) #struct.pack('>L', bytes_to_int(self.__dst))
+        #print('Conversion using nto host: {} ==> {}'.format(self.__src, socket.ntohl(bytes_to_int(self.__src))))    
+        #print('Conversion using host to network: {} ==> {}'.format(bytes_to_int(self.__src), socket.htonl(bytes_to_int(self.__src))))    
+        temp_s = struct.pack('<I',(bytes_to_int(self.__src)))
+    
+       
+        temp_d = struct.pack('<I',(bytes_to_int(self.__dst)))
+        #self.__src = socket.htonl(bytes_to_int(self.__src))
+        #self.__dst = socket.htonl(bytes_to_int(self.__dst))
+       
+        #len(self.__src) - 1
+        #print("LOL!")
+        #self.__src = temp_S
+        i = 0 
+        while i < len(self.__src):
+            #print ('Comparison points:{} {}'.format(bytes_to_int([self.__src[i]]),format(bytes_to_int([self.__dst[i]]))))
+            #print ('{} => {}'.format(self.__src[i], byte_shifter(self.__src)[i]))
+            #if i >= 1:
+                #print("======================================================================================")
+            #print("IP:{} => Normal {} => Int{}".format(socket.inet_ntoa(self.__src),self.__src , int(self.__src[i])))
+            #print("\nComparing cross endian{} => {}".format(socket.inet_ntoa(self.__src),socket.inet_ntoa(temp_s)))
+            #print("Comparing cross endian{} => {}".format(socket.inet_ntoa(self.__dst),socket.inet_ntoa(temp_d)))
+            
+            if (self.__src[i]) != (self.__dst[i]):
+            
+                if (self.__src[i]) > (self.__dst[i]):  # if the difference bit of src is greater we consider it incoming
                     forward = False
-                i = len(self.__src)
+                i = len(self.__src) 
+            i += 1 
+            #        print('Forward False!')
+        
+        self.__src = srcTemp
+        self.__dst = dstTemp
+        
+        
 
-        if forward:
+        if forward == True:
+            self.__flowSrc = self.__src
+            self.__isForward = True
             self.__flowId = str(self.getSourceIp()) + '-' \
                 + str(self.getDestinationIp()) + '-' \
                 + str(self.__srcPort) + '-' + str(self.__dstPort) + '-' \
                 + str(self.__protocol)
         else:
+            #print('Setting false!')
+            self.__isForward = False
+            self.__flowSrc = self.__dst
             self.__flowId = str(self.getDestinationIp()) + '-' \
                 + str(self.getSourceIp()) + '-' + str(self.__dstPort) \
                 + '-' + str(self.__srcPort) + '-' + str(self.__protocol)
-            #print ('FlowID:{}'.format(self.__flowId))
+        
+            
+        print ('FlowID:{}'.format(self.__flowId))
         return self.__flowId
 
     def dumpInfo(self):
@@ -74,18 +139,22 @@ class BasicPacketInfo:
     def getPayloadPacket(self):
         self.__payloadPacket = self.__payloadPacket + 0x01
         return self.__payloadPacket
+    def getFlowSrc(self):
+        print('Returning:{}'.format(self.__flowSrc))
+        return self.__flowSrc
 
     def getSourceIp(self):          
-    	if len(self.__src) == 16:			
-    		return socket.inet_ntop(10, self.__src)					
-    	return socket.inet_ntoa(self.__src)  # convert to utils format
+        if len(self.__src) == 16:           
+            return socket.inet_ntop(10, self.__src)                 
+        return socket.inet_ntoa((self.__src))
+     # convert to utils format
 
     def getDestinationIp(self):
-    	if len(self.__dst) == 16:			
-    		return socket.inet_ntop(10, self.__dst)					
-    	return socket.inet_ntoa(self.__dst)  # convert to utils format
+        if len(self.__dst) == 16:           
+            return socket.inet_ntop(10, self.__dst)                 
+        return socket.inet_ntoa(self.__dst)  # convert to utils format
     
-    	
+        
     def getId(self):
         return self.__id
 
@@ -233,32 +302,8 @@ class BasicPacketInfo:
         if flagByte & CWR:
             self.__flagCWR = True
 
-    '''def printTcp(self):
-        print *'\n')
-        print self.getTimestamp()
-        print socket.inet_ntoa(self.getSrc()) + '  --> ' \
-            + socket.inet_ntoa(self.getDst())
-        print str(self.getSrcPort()) + '  --> ' + str(self.getDstPort())
-        print 'Header: ' + str(self.getHeaderBytes())
-        print 'Payload: ' + str(self.getPayloadBytes())
-        print 'TCP'
-        if self.__flagFIN:
-            print 'FIN'
-        if self.__flagSYN:
-            print 'SYN'
-        if self.__flagRST:
-            print 'RST'
-        if self.__flagPSH:
-            print 'PSH'
-        if self.__flagACK:
-            print 'ACK'
-        if self.__flagURG:
-            print 'URG'
-        if self.__flagECE:
-            print 'ECE'
-        if self.__flagCWR:
-            print 'CWR'''
+    def isForward(self):
+            return self.__isForward
 
 
-
-			
+            

@@ -3,6 +3,7 @@
 import pcap
 import sys
 import socket
+import struct 
 
 
 class BasicPacketInfo:
@@ -19,16 +20,20 @@ class BasicPacketInfo:
         ):
 
     # Info to generate flows from packers (8/8)
-
-        self.__id = generator
+        print('Packet Info constructor called!')
+        self.__id = 1 #generator.nextId()
         self.__src = src
         self.__dst = dst
+       
         self.__srcPort = srcPort
         self.__dstPort = dstPort
         self.__protocol = protocol
         self.__timestamp = timestamp
         self.generateFlowId()
+        self.__flowSrc = None
+        self.__isForward = True
         self.__payloadBytes = 0
+        
 
     # Flags (8/8)
 
@@ -46,27 +51,22 @@ class BasicPacketInfo:
         self.__TCPWindow = -0x01
         self.__headerBytes = 0
         self.__payloadPacket = 0
-
+        #Work fine i think 
     def generateFlowId(self):
         forward = True
-
-        for i in range(len(self.__src)):
-            if bytes(self.__src[i]) != bytes(self.__dst[i]):
-                if bytes(self.__src[i]) > bytes(self.__dst[i]):  # if the difference bit of src is greater we consider it incoming
+        for i in range(0,len(self.__src)):
+            if self.__src[i] != self.__dst[i]:
+                if self.__src[i] > self.__dst[i]:
                     forward = False
                 i = len(self.__src)
 
         if forward:
-            self.__flowId = str(self.getSourceIp()) + '-' \
-                + str(self.getDestinationIp()) + '-' \
-                + str(self.__srcPort) + '-' + str(self.__dstPort) + '-' \
-                + str(self.__protocol)
+            self.__flowId = self.getSourceIp() + "-" + self.getDestinationIp() + "-" + str(self.__srcPort) + "-" + str(self.__dstPort) + "-" + str(self.__protocol)
         else:
-            self.__flowId = str(self.getDestinationIp()) + '-' \
-                + str(self.getSourceIp()) + '-' + str(self.__dstPort) \
-                + '-' + str(self.__srcPort) + '-' + str(self.__protocol)
-            #print ('FlowID:{}'.format(self.__flowId))
+            self.__flowId = self.getDestinationIp() + "-" + self.getSourceIp() + "-" + str(self.__dstPort) + "-" + str(self.__srcPort) + "-" + str(self.__protocol)
+        print('flowId:' + self.__flowId)
         return self.__flowId
+
 
     def dumpInfo(self):
         return None
@@ -74,18 +74,22 @@ class BasicPacketInfo:
     def getPayloadPacket(self):
         self.__payloadPacket = self.__payloadPacket + 0x01
         return self.__payloadPacket
+    def getFlowSrc(self):
+        print('Returning:{}'.format(self.__flowSrc))
+        return self.__flowSrc
 
     def getSourceIp(self):          
-    	if len(self.__src) == 16:			
-    		return socket.inet_ntop(10, self.__src)					
-    	return socket.inet_ntoa(self.__src)  # convert to utils format
+        if len(self.__src) == 16:           
+            return socket.inet_ntop(10, self.__src)                 
+        return socket.inet_ntoa((self.__src))
+     # convert to utils format
 
     def getDestinationIp(self):
-    	if len(self.__dst) == 16:			
-    		return socket.inet_ntop(10, self.__dst)					
-    	return socket.inet_ntoa(self.__dst)  # convert to utils format
+        if len(self.__dst) == 16:           
+            return socket.inet_ntop(10, self.__dst)                 
+        return socket.inet_ntoa(self.__dst)  # convert to utils format
     
-    	
+        
     def getId(self):
         return self.__id
 
@@ -233,32 +237,8 @@ class BasicPacketInfo:
         if flagByte & CWR:
             self.__flagCWR = True
 
-    '''def printTcp(self):
-        print *'\n')
-        print self.getTimestamp()
-        print socket.inet_ntoa(self.getSrc()) + '  --> ' \
-            + socket.inet_ntoa(self.getDst())
-        print str(self.getSrcPort()) + '  --> ' + str(self.getDstPort())
-        print 'Header: ' + str(self.getHeaderBytes())
-        print 'Payload: ' + str(self.getPayloadBytes())
-        print 'TCP'
-        if self.__flagFIN:
-            print 'FIN'
-        if self.__flagSYN:
-            print 'SYN'
-        if self.__flagRST:
-            print 'RST'
-        if self.__flagPSH:
-            print 'PSH'
-        if self.__flagACK:
-            print 'ACK'
-        if self.__flagURG:
-            print 'URG'
-        if self.__flagECE:
-            print 'ECE'
-        if self.__flagCWR:
-            print 'CWR'''
+    def isForward(self):
+            return self.__isForward
 
 
-
-			
+            

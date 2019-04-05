@@ -24,6 +24,7 @@ class FlowGenerator:
         self.init()
 
     def init(self):
+        self.__flowCount = 0 
         self.__currentFlows = {}
         self.__finishedFlowCount = 0
         self.__IpAddresses = {}
@@ -34,9 +35,10 @@ class FlowGenerator:
 
         currentTimestamp = packetInfo.getTimestamp()
 
-       	#print ("{}".format(currentTimestamp))
-       	#print ("of size {}".format(packetInfo.getPayloadBytes()))
+        #print ("{}".format(currentTimestamp))
+        #print ("of size {}".format(packetInfo.getPayloadBytes()))
         if packetInfo.getFlowId() in self.__currentFlows:
+            #print('Flow exists:{}'.format(packetInfo.getFlowId()))
             flow = self.__currentFlows[packetInfo.getFlowId()]
             #print ('Flow: {} exists'.format(packetInfo.getFlowId()))
             if currentTimestamp - flow.getFlowStartTime() \
@@ -46,8 +48,8 @@ class FlowGenerator:
                     # flow listener
                         # extra shit
 
-                #print ('Flow time out')
-                #self.__currentFlows[packetInfo.getFlowId()].printFinalStat()
+                print ('Flow time out')
+                self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures("||")
                 del self.__currentFlows[packetInfo.getFlowId()]
                 self.__currentFlows[packetInfo.getFlowId()] = \
                     BasicFlow(packetInfo)
@@ -59,7 +61,7 @@ class FlowGenerator:
                 #print ('Flow finished')
 
                 flow.addPacket(packetInfo)
-                #self.__currentFlows[packetInfo.getFlowId()].printFinalStat()
+                self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures("||")
                 del self.__currentFlows[packetInfo.getFlowId()]
             else:
 
@@ -72,23 +74,25 @@ class FlowGenerator:
 
                 # 1
                 # 2 bull
-
+                #print('Updating flow!')
                 self.__currentFlows[packetInfo.getFlowId()].addPacket(packetInfo)
         else:
 
             #print ('Creating Flow:{}'.format(packetInfo.getFlowId()))
+            self.__flowCount += 1
             self.__currentFlows[packetInfo.getFlowId()] = \
                 BasicFlow(self.__bidirectional, packetInfo)
 
     def listBasic(self):
-        print ('final list')
-        count = 0
+        #print ('final list')
+        print("A total of {}".format(self.__flowCount))
+        
         for (key, val) in self.__currentFlows.items():
-            count += 1
+            
            
-            val.printFinalStat()
-            if count == 5:
-            	break 
+            val.dumpFlowBasedFeatures('||')
+            #if count == 5:
+            #    break 
 
 
 
