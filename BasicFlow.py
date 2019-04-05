@@ -12,24 +12,39 @@ class BasicFlow:
 
     Act_data_pkt_backward = 0
 
-    def __init__(self, bidirectional, packetInfo):
+    def __init__(self, *args):
         self.__count = 1
 
         # non-static
-        self.initParameters()
-        self.__isBidirectional = bidirectional
+        #bidirectional, packetInfo, flowSrc = None, flowDst = None, flowSrcPort = None, flowDstPort= None
+        #direction none function remaining!
         self.__min_seg_size_forward = -1
         self.__Act_data_pkt_forward = 0
         self.__Init_Win_bytes_forward = -1
         self.__Init_Win_bytes_backward = -1
-        self.__src = None
-        self.__dst = None
-        self.__srcPort = None
-        self.__dstPort = None
+
+        if len(args) == 1:
+            self.initParameters()
+            self.__isBidirectional = True
+            self.firstPacket(args[0])
+
+        elif len(args) == 6:
+            self.initParameters()
+            self.__isBidirectional = args[0]
+            self.__src = args[2]
+            self.__dst = args[3]
+            self.__srcPort = args[4]
+            self.__dstPort = args[5]
         
-        self.__flowStartTime = 0
+            self.firstPacket(args[1])
+            
+
+        elif len(args) == 2:
+            self.initParameters()
+            self.__isBidirectional = args[0] 
+            self.firstPacket(args[1])
+      
         
-        self.firstPacket(packetInfo)
         
         
 
@@ -60,23 +75,38 @@ class BasicFlow:
         self.__bHeaderBytes = 0
 
 
-    def printFinalStat(self):
-        if len(self.__src) == 16:
-            print ('{}'.format(self.__flowId))        
-            print ('{}:::{}:::{}:::{}:::{}:::{}:::{}:::{}:::{}'.format(socket.inet_ntop(10,self.__src),
-                self.__srcPort, socket.inet_ntop(10,self.__dst),
-                self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount(),self.__fwdPktStats.getSum(),self.__bwdPktStats.getSum()))
+        #subflow functions use this
+        self.__sfLastPacketTS=-1 
+        self.__sfCount=0
+        self.__sfAcHelper=-1
+
+        #bulk flows
+        self.__fbulkDuration=0
+        self.__fbulkPacketCount=0
+        self.__fbulkSizeTotal=0
+        self.__fbulkStateCount=0
+        self.__fbulkPacketCountHelper=0
+        self.__fbulkStartHelper=0
+        self.__fbulkSizeHelper=0
+        self.__flastBulkTS=0
+        self.__bbulkDuration=0
+        self.__bbulkPacketCount=0
+        self.__bbulkSizeTotal=0
+        self.__bbulkStateCount=0
+        self.__bbulkPacketCountHelper=0
+        self.__bbulkStartHelper=0
+        self.__bbulkSizeHelper=0
+        self.__blastBulkTS=0
 
 
-        else:
-            print ('{}'.format(self.__flowId))        
-            print ('{}:::{}:::{}:::{}:::{}:::{}:::{}:::SizeFwd:{}:::SDF{}:::FKPS{:.0f}'.format(socket.inet_ntoa(self.__src),
-                self.__srcPort, socket.inet_ntoa(self.__dst),
-                self.__dstPort, self.__protocol,self.__fwdPktStats.getCount(), self.__bwdPktStats.getCount(),self.__fwdPktStats.getSum(),self.__fwdPktStats.getStandardDeviation(),self.getfPktsPerSecond()))
 
+    
     def firstPacket(self, packetInfo):
 
         # 1,2,3
+        self.updateFlowBulk(packetInfo)
+        self.detectUpdateSubflows(packetInfo)
+        self.checkFlags(packetInfo)
 
         self.__flowStartTime = packetInfo.getTimestamp()
         self.__flowLastSeen = packetInfo.getTimestamp()
@@ -93,9 +123,9 @@ class BasicFlow:
             self.__dstPort = packetInfo.getDstPort()
 
         if self.__src == packetInfo.getSrc:
-
+            
             self.__min_seg_size_forward = packetInfo.getHeaderBytes()
-            Init_Win_bytes_forward = packetInfo.getTCPWindow()
+            self.__Init_Win_bytes_forward = packetInfo.getTCPWindow()
             self.__flowLengthStats.addValue(packetInfo.getPayloadBytes())
             self.__fwdPktStats.addValue(packetInfo.getPayloadBytes())
             self.__fHeaderBytes = packetInfo.getHeaderBytes()
@@ -110,7 +140,8 @@ class BasicFlow:
                 self.__fURG_cnt += 1
         else:
             #print('Started with Rever=========================================================================')
-            Init_Win_bytes_backward = packetInfo.getTCPWindow()
+          
+            self.__Init_Win_bytes_backward = packetInfo.getTCPWindow()
             self.__flowLengthStats.addValue(packetInfo.getPayloadBytes())
             self.__bwdPktStats.addValue(packetInfo.getPayloadBytes())
             self.__bHeaderBytes = packetInfo.getHeaderBytes()
@@ -119,10 +150,10 @@ class BasicFlow:
             self.__backward.append(packetInfo)
 
             if packetInfo.hasFlagPSH():
-                self.__fPSH_cnt += 1
+                self.__bPSH_cnt += 1
 
             if packetInfo.hasFlagURG():
-                self.__fURG_cnt += 1
+                self.__bURG_cnt += 1
 
         # (2/2)
 
@@ -165,11 +196,10 @@ class BasicFlow:
                 self.__backwardBytes += packetInfo.getPayloadBytes()
                 if len(self.__backward) > 1 :
                     self.__backwardIAT.addValue(currentTimestamp - self.__backwardLastSeen)
-
                 self.__backwardLastSeen = currentTimestamp
         else:
             #print("================================================================================")
-            if packetInfo.getPayloadBytes >= 1:
+            if packetInfo.getPayloadBytes() >= 1:
                 self.__Act_data_pkt_forward += 1
             self.__fwdPktStats.addValue(packetInfo.getPayloadBytes())
             self.__flowLengthStats.addValue(packetInfo.getPayloadBytes())
@@ -186,43 +216,52 @@ class BasicFlow:
                 self.__min_seg_size_forward = packetInfo.getHeaderBytes()
 
 
-        self.__flowIAT.addValue(packetInfo.getTimestamp()- self.__flowLastSeen)
-        self.__flowLastSeen = currentTimestamp
+        self.__flowIAT.addValue(packetInfo.getTimestamp() - self.__flowLastSeen)
+        self.__flowLastSeen = packetInfo.getTimestamp()
 
     def getFlowStartTime(self):
         return self.__flowStartTime
 
 
+#1
     def getfPktsPerSecond(self):
         duration = self.__flowLastSeen - self.__flowStartTime
         if duration == 0 :
             return 0
         else:
             return (len(self.__forward)/(duration/1000000.0))
-
+#2
     def getbPktsPerSecond(self):
         duration = self.__flowLastSeen - self.__flowStartTime
         if duration == 0 :
             return 0
         else:
             return (len(self.__backward)/(duration/1000000.0))   
-
+#3
     def getDownUpRatio(self):           
         if len(self.__forward) > 0:                     
             return (float(len(self.__backward)) / float(len(self.__backward)))
         else:
             return 0 
+#4
+    def getAvgPacketSize(self):
+        if self.packetCount() > 0:
+            return (self.flowLengthStats.getSum()/ self.packetCount())
+        else:
+            return 0
+#5
     def fAvgSegmentSize(self):
         if len(self.__forward) > 0:
             return (self.__fwdPktStats.getSum()/(float(len(self.__forward))))
         else:
             return 0
+#6 
     def bAvgSegmentSize(self):
         if len(self.__backward) > 0:
             return (self.__bwdPktStats.getSum()/(float(len(self.__backward))))
         else:
             return 0
-    
+#7    
     def initFlags(self):
         self.__fFIN_cnt = 0
         self.__fPSH_cnt = 0
@@ -233,25 +272,100 @@ class BasicFlow:
         self.__fCWR_cnt = 0
         self.__fRST_cnt = 0
 
+
+#8
     def checkFlags(self,packetInfo):
-        if self.hasFlagFIN():
+        if packetInfo.hasFlagFIN():
             self.__fFIN_cnt += 1
-        if self.hasFlagSYN():
+        if packetInfo.hasFlagSYN():
             self.__fSYN_cnt += 1
-        if self.hasFlagRST():
+        if packetInfo.hasFlagRST():
             self.__fRST_cnt += 1
-        if self.hasFlagPSH():
+        if packetInfo.hasFlagPSH():
             self.__fPSH_cnt += 1
-        if self.hasFlagACK():
+        if packetInfo.hasFlagACK():
             self.__fACK_cnt += 1
-        if self.hasFlagURG():
+        if packetInfo.hasFlagURG():
             self.__fURG_cnt += 1
-        if self.hasFlagECE():
+        if packetInfo.hasFlagECE():
             self.__fECE_cnt += 1
-        if self.hasFlagCWR():
+        if packetInfo.hasFlagCWR():
             self.__fCWR_cnt += 1
+#9
+    def getSlow_fbytes(self):
+        if self.__sfCount <= 0:
+            return 0
+        else:
+            return self.__forwardBytes/sfCount
+#10
+    def getSflow_fpackets(self):
+        if self.__sfCount <= 0:
+            return 0
+        else:
+            return len(self.__forward)/sfCount
+#11
+    def getSlow_bbytes(self):
+        if self.__sfCount <= 0:
+            return 0
+        else:
+            return self.__backwardBytes/sfCount
+#12
+    def getSflow_bpackets(self):
+        if self.__sfCount <= 0:
+            return 0
+        else:
+            return len(self.__backward)/sfCount
+#13
+    def detectUpdateSubflows(self, packet):
+        if self.__sfLastPacketTS == -1:
+            self.__sfLastPacketTS = packet.getTimestamp()
+            self.__sfAcHelper = packet.getTimestamp()
+        if (packet.getTimestamp()-(self.__sfLastPacketTS)/1000000) > 1.0:
+            self.__sfCount += 1
+            self.__lastSFduration = packet.getTimestamp() - self.__sfAcHelper
+            self.updateActiveIdleTime(packet.getTimestamp()-self.__sfLastPacketTS, 5000000)
+            self.__sfAcHelper = packet.getTimestamp()
+        self.__sfLastPacketTS = packet.getTimestamp()
 
+#14
+    def updateFlowBulk(self,packet):
+        if self.__src == packet.getSrc():
+            self.updateForwardBulk(packet,self.__blastBulkTS)
+        else:
+            1#self.updateBackwardBulk(packet,self.__flastBulkTS)
 
+    def updateForwardBulk(self,packet,tsOflastBulkInOther):
+        size - packet.getPayloadBytes()
+        if tsOflastBulkInOther > self.__fbulkStartHelper:
+            self.__fbulkStartHelper = 0
+        if size <= 0:
+            return 
+        packet.getPayloadPacket()
+
+        if self.__fbulkStartHelper == 0:
+            self.__fbulkStartHelper = packet.getTimetamp()
+            self.__fbulkPacketCountHelper = 1
+            self.__fbulkSizeHelper = sizeself.__flastBulkTS = packet.getTimetamp()
+        else:
+            if ((packet.getTimestamp()- self.__flastBulkTS)/ 1000000) > 1.0:
+                self.__fbulkStartHelper = packet.getTimestamp()
+                self.__flastBulkTS = packet.getTimestamp()
+                self.__fbulkPacketCountHelper = 1
+                self.__fbulkSizeHelper = size
+            else:
+                self.__fbulkPacketCountHelper += 1
+                self.__fbulkSizeHelper += size
+                if self.__fbulkPacketCountHelper == 4:
+                    self.__fbulkStateCount +=1
+                    self.__fbulkPacketCount += fbulkPacketCountHelper
+                    self.__fbulkSizeTotal += fbulkSizeHelper
+                    self.__fbulkDuration += (packet.getTimestamp() - self.__fbulkStartHelper)
+                elif self.__fbulkPacketCountHelper > 4:
+                    self.__fbulkPacketCount += 1
+                    self.__fbulkSizeTotal += size
+                    self.__fbulkDuration += (packet.getTimestamp()- self.flastBulkTS)
+                self.flastBulkTS = packet.getTimestamp()
+            
     def getFlowDuration(self):
         return round(((self.__flowLastSeen - self.__flowStartTime)), 6)
 
@@ -260,6 +374,27 @@ class BasicFlow:
 
     def getDstPort(self):
         return self.__dstPort
+
+    def updateActiveIdleTime(self,currentTime, threshold):
+        if currentTime - self.__endActiveTime > threshold:
+            if self.__endActiveTime - self.__startActiveTime > 0:
+                self.__flowActive.addValue(self.__endActiveTime - self.__startActiveTime)
+            self.__flowIdle.addValue(currentTime - self.__endActiveTime)
+            self.startActiveTime = currentTime
+            self.__endActiveTime = currentTime
+        else:
+            self.__endActiveTime = currentTime
+
+    def endActiveIdleTime(self,currentTime, threshold, flowTimeOut, isFlagEnd):
+        if self.__endActiveTime - self.__startActiveTime > 0:
+            self.__flowActive.addValue(self.__endActiveTime - self.__startActiveTime)
+        if (not isFlagEnd) and ((flowTimeOut - (self.__endActiveTime - self.__flowStartTime))> 0):
+            self.__flowIdle.addValue(flowTimeOut - (self.__endActiveTime - self.__flowStartTime)) 
+
+
+    
+        
+        
     def dumpFileHeadings(self, sep, fileObject):
         dump = ""
         dump += str('Flow ID')
@@ -551,7 +686,7 @@ class BasicFlow:
             dump += sep
             
         
-        print("{}".format(dump))
+        #print("{}".format(dump))
         fileObject.write(dump)
         fileObject.write('\n')
     

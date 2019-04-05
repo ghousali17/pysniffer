@@ -30,9 +30,7 @@ class BasicPacketInfo:
         self.__protocol = protocol
         self.__timestamp = timestamp
         self.generateFlowId()
-        self.__flowSrc = None
-        self.__isForward = True
-        self.__payloadBytes = 0
+        
         
 
     # Flags (8/8)
@@ -54,11 +52,21 @@ class BasicPacketInfo:
         #Work fine i think 
     def generateFlowId(self):
         forward = True
+        print('Length src:')
+        print(len(self.__src))
+        print('\n\n\n\n')
         for i in range(0,len(self.__src)):
+            print('')
             if self.__src[i] != self.__dst[i]:
+                print('Not equal!')
                 if self.__src[i] > self.__dst[i]:
+                    print('SRC is greater!')
                     forward = False
-                i = len(self.__src)
+                break
+
+        for i in range(0,len(self.__src)):
+            print(i)
+        
 
         if forward:
             self.__flowId = self.getSourceIp() + "-" + self.getDestinationIp() + "-" + str(self.__srcPort) + "-" + str(self.__dstPort) + "-" + str(self.__protocol)

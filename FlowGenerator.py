@@ -57,7 +57,7 @@ class FlowGenerator:
                 print ('Flow time out')
                 self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures(",",self.fileObject)
                 del self.__currentFlows[packetInfo.getFlowId()]
-                self.__currentFlows[packetInfo.getFlowId()] =  BasicFlow(self.__bidirectional,packetInfo)
+                self.__currentFlows[packetInfo.getFlowId()] =  BasicFlow(self.__bidirectional,packetInfo, flow.getSrc(),flow.getDst(),flow.getSrcPort(), flow.getDstPort())
             elif packetInfo.hasFlagFIN():
 
                 # 1
@@ -70,17 +70,13 @@ class FlowGenerator:
                 del self.__currentFlows[packetInfo.getFlowId()]
             else:
 
-                # 1
-                # 2
-                # del self.__currentFlows[packetInfo.getFlowId()]
-
                
                 print ('flow updated')
 
-                # 1
-                # 2 bull
-                #print('Updating flow!')
-                self.__currentFlows[packetInfo.getFlowId()].addPacket(packetInfo)
+                
+                flow.updateActiveIdleTime(currentTimestamp, self.__activityTimeout)
+                flow.addPacket(packetInfo)
+                self.__currentFlows[packetInfo.getFlowId()] = flow
         else:
 
             print ('Creating Flow:{}'.format(packetInfo.getFlowId()))
@@ -91,12 +87,10 @@ class FlowGenerator:
         #print ('final list')
         print("A total of {}".format(self.__flowCount))
         
-        for (key, val) in self.__currentFlows.items():
-            
-           
+        for (key, val) in self.__currentFlows.items():           
             val.dumpFlowBasedFeatures(',', self.fileObject)
             #if count == 5:
             #    break 
 
-
+#printer remaining!!
 

@@ -9,7 +9,7 @@ class summaryStatistics():
     def addValue(self,value):
 
         self.__sum += value
-        self.__sum2 += value * value
+        self.__sum2 += (value * value)
         self.__count += 1
 
         if self.__min == None:
@@ -45,9 +45,16 @@ class summaryStatistics():
         if self.__count == 0:
             return 0
         else:
-            return ((self.__sum2 / self.__count) - (self.getMean()*self.getMean())) ** (1/2.0)
+            return self.getVariance() ** (1/2.0)
+            
     def getVariance(self):
-        return self.getStandardDeviation()*self.getStandardDeviation()
+        if self.__count == 0:
+            return 0
+        else:
+            return (self.__sum2 / self.__count)- (self.getMean()*self.getMean())
+
+        
+
 
 
 

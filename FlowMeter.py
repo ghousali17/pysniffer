@@ -16,6 +16,7 @@ class FlowMeter():
 	def capture_file(self):
 		flow_log = {}
 		count = 0
+		#flowGen = new FlowGenerator(true,120000000L, 5000000L);
 		flowGen = FlowGenerator(True,120000000, 5000000)
 		flowProc = FlowProcessor()
 		ip6count = 0
