@@ -3,6 +3,7 @@
 import pcap
 import sys
 import socket
+import signal 
 from BasicPacketInfo import BasicPacketInfo
 from BasicFlow import BasicFlow
 from struct import *
@@ -11,6 +12,10 @@ from struct import *
 # All that is left is for us to figure out how can finished flows be stored and or printed
 
 class FlowGenerator:
+    def sig_handler(self,sig,frame):
+        print('HandlerCalled!')
+        sys.exit(0)
+
 
     def __init__(
         self,
@@ -25,6 +30,8 @@ class FlowGenerator:
         self.init()
         self.__header = 0
         self.__fileObject = output_file_object
+        signal.signal(signal.SIGINT, self.sig_handler)
+
 
 
     def init(self):
