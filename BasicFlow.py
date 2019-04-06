@@ -246,7 +246,7 @@ class BasicFlow:
 #4
     def getAvgPacketSize(self):
         if self.packetCount() > 0:
-            return (self.flowLengthStats.getSum()/ self.packetCount())
+            return (self.__flowLengthStats.getSum()/ self.packetCount())
         else:
             return 0
 #5
@@ -271,6 +271,9 @@ class BasicFlow:
         self.__fACK_cnt = 0
         self.__fCWR_cnt = 0
         self.__fRST_cnt = 0
+        self.__PSH_cnt = 0
+        self.__URG_cnt = 0
+        
 
 
 #8
@@ -282,39 +285,39 @@ class BasicFlow:
         if packetInfo.hasFlagRST():
             self.__fRST_cnt += 1
         if packetInfo.hasFlagPSH():
-            self.__fPSH_cnt += 1
+            self.__PSH_cnt += 1
         if packetInfo.hasFlagACK():
             self.__fACK_cnt += 1
         if packetInfo.hasFlagURG():
-            self.__fURG_cnt += 1
+            self.__URG_cnt += 1
         if packetInfo.hasFlagECE():
             self.__fECE_cnt += 1
         if packetInfo.hasFlagCWR():
             self.__fCWR_cnt += 1
 #9
-    def getSlow_fbytes(self):
+    def getSflow_fbytes(self):
         if self.__sfCount <= 0:
             return 0
         else:
-            return self.__forwardBytes/sfCount
+            return self.__forwardBytes/self.__sfCount
 #10
     def getSflow_fpackets(self):
         if self.__sfCount <= 0:
             return 0
         else:
-            return len(self.__forward)/sfCount
+            return len(self.__forward)/self.__sfCount
 #11
-    def getSlow_bbytes(self):
+    def getSflow_bbytes(self):
         if self.__sfCount <= 0:
             return 0
         else:
-            return self.__backwardBytes/sfCount
+            return self.__backwardBytes/self.__sfCount
 #12
     def getSflow_bpackets(self):
         if self.__sfCount <= 0:
             return 0
         else:
-            return len(self.__backward)/sfCount
+            return len(self.__backward)/self.__sfCount
 #13
     def detectUpdateSubflows(self, packet):
         if self.__sfLastPacketTS == -1:
@@ -332,8 +335,8 @@ class BasicFlow:
         if self.__src == packet.getSrc():
             self.updateForwardBulk(packet,self.__blastBulkTS)
         else:
-            1#self.updateBackwardBulk(packet,self.__flastBulkTS)
-
+            self.updateBackwardBulk(packet,self.__flastBulkTS)
+#15
     def updateForwardBulk(self,packet,tsOflastBulkInOther):
         size - packet.getPayloadBytes()
         if tsOflastBulkInOther > self.__fbulkStartHelper:
@@ -357,15 +360,131 @@ class BasicFlow:
                 self.__fbulkSizeHelper += size
                 if self.__fbulkPacketCountHelper == 4:
                     self.__fbulkStateCount +=1
-                    self.__fbulkPacketCount += fbulkPacketCountHelper
-                    self.__fbulkSizeTotal += fbulkSizeHelper
+                    self.__fbulkPacketCount += self.__fbulkPacketCountHelper
+                    self.__fbulkSizeTotal += self.__fbulkSizeHelper
                     self.__fbulkDuration += (packet.getTimestamp() - self.__fbulkStartHelper)
                 elif self.__fbulkPacketCountHelper > 4:
                     self.__fbulkPacketCount += 1
                     self.__fbulkSizeTotal += size
                     self.__fbulkDuration += (packet.getTimestamp()- self.flastBulkTS)
                 self.flastBulkTS = packet.getTimestamp()
-            
+#16
+    def updateBackwardBulk(self,packet ,tsOflastBulkInOther):
+        size = packet.getPayloadBytes()
+        if tsOflastBulkInOther > self.__bbulkStartHelper:
+            self.__bbulkStartHelper = 0
+        if size <=0:
+            return
+
+        packet.getPayloadPacket()
+
+        if self.__bbulkStartHelper == 0:
+            self.__bbulkStartHelper = packet.getTimestamp()
+            self.__bbulkPacketCountHelper = 1
+            self.__bbulkSizeHelper = size
+            self.__blastBulkTS = packet.getTimestamp()
+        else:
+            if ((packet.getTimestamp()- self.__blastBulkTS)/ 1000000) > 1.0:
+                self.__bbulkStartHelper = packet.getTimestamp()
+                self.__blastBulkTS = packet.getTimestamp()
+                self.__bbulkPacketCountHelper = 1
+                self.__bbulkSizeHelper = size
+            else:
+                self.__bbulkPacketCountHelper += 1
+                self.__bbulkSizeHelper += size
+                if self.__bbulkPacketCountHelper == 4:
+                    self.__bbulkStateCount +=1
+                    self.__bbulkPacketCount += self.__bbulkPacketCountHelper
+                    self.__bbulkSizeTotal += self.__bbulkSizeHelper
+                    self.__bbulkDuration += (packet.getTimestamp() - self.__bbulkStartHelper)
+                elif self.__bbulkPacketCountHelper > 4:
+                    self.__bbulkPacketCount += 1
+                    self.__bbulkSizeTotal += size
+                    self.__bbulkDuration += (packet.getTimestamp()- self.blastBulkTS)
+                self.blastBulkTS = packet.getTimestamp()
+
+#17
+    def fbulkStateCount(self):
+        return self.__fbulkStateCount
+
+#18
+    def fbulkSizeTotal(self):
+        return self.__fbulkSizeTotal
+#19
+    def fbulkPacketCount(self):
+        return self.__fbulkPacketCount
+    
+#20
+    
+    def fbulkDuration(self):
+        return self.__fbulkDuration
+
+#21    
+    def fbulkDurationInSecond(self):
+        return self.__fbulkDuration/1000000
+
+#22
+    def fAvgBytesPerBulk(self):
+        if self.fbulkStateCount() != 0:
+            return self.fbulkSizeTotal() / self.fbulkStateCount()
+        else:
+            return 0
+   
+#23 
+    def fAvgPacketsPerBulk(self):
+        if self.fbulkStateCount() != 0:
+            return self.fbulkPacketCount()/ self.fbulkStateCount()
+        else:
+            return 0 
+    def fAvgBulkRate(self):
+        if self.fbulkDuration() != 0:
+            return self.fbulkSizeTotal()/ self.fbulkDurationInSecond()
+        else:
+            return 0
+
+#24
+    def bbulkStateCount(self):
+        return self.__bbulkStateCount
+
+#25
+    def bbulkSizeTotal(self):
+        return self.__bbulkSizeTotal
+#26
+    def bbulkPacketCount(self):
+        return self.__bbulkPacketCount
+    
+#27
+    
+    def bbulkDuration(self):
+        return self.__bbulkDuration
+
+#28    
+    def bbulkDurationInSecond(self):
+        return self.__bbulkDuration/1000000
+
+#29
+    def bAvgBytesPerBulk(self):
+        if self.bbulkStateCount() != 0:
+            return self.bbulkSizeTotal() / self.bbulkStateCount()
+        else:
+            return 0
+   
+#30 
+    def bAvgPacketsPerBulk(self):
+        if self.bbulkStateCount() != 0:
+            return self.bbulkPacketCount()/ self.bbulkStateCount()
+        else:
+            return 0 
+    def bAvgBulkRate(self):
+        if self.bbulkDuration() != 0:
+            return self.bbulkSizeTotal()/ self.bbulkDurationInSecond()
+        else:
+            return 0
+
+   
+
+    
+   
     def getFlowDuration(self):
         return round(((self.__flowLastSeen - self.__flowStartTime)), 6)
 
@@ -501,6 +620,87 @@ class BasicFlow:
         dump += sep
         dump += 'Pkt Len Var'
         dump += sep
+
+        dump += 'FIN Flag Cnt'
+        dump += sep
+        dump += 'SYN Flag Cnt'
+        dump += sep
+        dump += 'RST Flag Cnt'
+        dump += sep
+        dump += 'PSH Flag Cnt'
+        dump += sep
+        dump += 'ACK Flag Cnt'
+        dump += sep
+        dump += 'URG Flag Cnt'
+        dump += sep
+        dump += 'CWE Flag Cnt'
+        dump += sep
+        dump += 'ECE Flag Cnt'
+        dump += sep
+
+        dump += 'Down/Up Ratio'
+        dump += sep
+        dump += 'Pkt Sive Avg'
+        dump += sep
+        dump += 'Fwd Seg Size Avg'
+        dump += sep
+        dump += 'Bwd Seg Size Avg'
+        dump += sep
+
+        dump += 'Fwd Byts/b Avg'
+        dump += sep
+        dump += 'Fwd Pkts/b Avg'
+        dump += sep
+        dump += 'Fwd Blk Rate Avg'
+        dump += sep
+        dump += 'Bwd Byts/b Avg'
+        dump += sep
+        dump += 'Bwd Pkts/b Avg'
+        dump += sep
+        dump += 'Bwd Blk Rate Avg'
+        dump += sep
+
+        dump += "Subflow Fwd Pkts"
+        dump += sep
+        dump += "Subflow Fwd Byts"
+        dump += sep
+        dump += "Subflow Bwd Pkts"
+        dump += sep
+        dump += "Subflow Bwd Byts"
+        dump += sep
+
+        dump += "Init Fwd Win Byts"
+        dump += sep
+        dump += "Init Bwd Win Byts"
+        dump += sep
+
+        dump += "Fwd Act Data Pkts"
+        dump += sep
+        dump += "Fwd Seg Size Min"
+        dump += sep
+
+        dump += "Active Mean"
+        dump += sep
+        dump += "Active Std"
+        dump += sep
+        dump += "Active Max"
+        dump += sep
+        dump += "Active Min"
+        dump += sep
+
+        dump += "Idle Mean"
+        dump += sep
+        dump += "Idle Std"
+        dump += sep
+        dump += "Idle Max"
+        dump += sep
+        dump += "Idle Min"
+        dump += sep
+
+
+   
+   
+   
 
         fileObject.write(dump)
         fileObject.write('\n')
@@ -684,12 +884,119 @@ class BasicFlow:
             dump += sep
             dump += str("0")
             dump += sep
-            
+
+        dump += str(self.__fFIN_cnt)
+        dump += sep
+        dump += str(self.__fSYN_cnt)
+        dump += sep
+        dump += str(self.__fRST_cnt)
+        dump += sep
+        dump += str(self.__PSH_cnt )
+        dump += sep
+        dump += str(self.__fACK_cnt)
+        dump += sep
+        dump += str(self.__URG_cnt)
+        dump += sep
+        dump += str(self.__fCWR_cnt)
+        dump += sep
+        dump += str(self.__fECE_cnt)
+        dump += sep
+
+        dump += str(self.getDownUpRatio())
+        dump += sep
+        dump +=str(self.getAvgPacketSize())
+        dump += sep
+        dump += str(self.fAvgSegmentSize())
+        dump += sep
+        dump +=str (self.bAvgSegmentSize())
+        dump += sep
+
+        #Dafuq??
+       
+        dump += str(self.fAvgBytesPerBulk())
+        dump += sep
+        dump += str(self.fAvgPacketsPerBulk())
+        dump += sep
+        dump += str(self.fAvgBulkRate())
+        dump += sep
+        dump += str(self.fAvgBytesPerBulk())
+        dump += sep
+
+        dump += str(self.bAvgPacketsPerBulk())
+        dump += sep
+        dump += str(self.bAvgBulkRate())
+        dump += sep
+
+        dump += str(self.getSflow_fpackets())
+        dump += sep
+        dump += str(self.getSflow_fbytes())
+        dump += sep
+        dump += str(self.getSflow_bpackets())
+        dump += sep
+        dump += str(self.getSflow_bbytes())
+        dump += sep
+
+        dump += str(self.__Init_Win_bytes_forward)
+        dump += sep
+        dump += str(self.__Init_Win_bytes_backward)
+        dump += sep
+        dump += str(self.__Act_data_pkt_forward)
+        dump += sep
+        dump += str(self.__min_seg_size_forward)
+        dump += sep
+
+        if self.__flowActive.getCount() > 0:
+            dump += str(self.__flowActive.getMean())
+            dump += sep
+            dump += str(self.__flowActive.getStandardDeviation())
+            dump += sep
+            dump += str(self.__flowActive.getMax())
+            dump += sep
+            dump += str(self.__flowActive.getMin())
+            dump += sep
+        else:
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+
+        if self.__flowIdle.getCount() > 0:
+            dump += str(self.__flowIdle.getMean())
+            dump += sep
+            dump += str(self.__flowIdle.getStandardDeviation())
+            dump += sep
+            dump += str(self.__flowIdle.getMax())
+            dump += sep
+            dump += str(self.__flowIdle.getMin())
+            dump += sep
+        else:
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+
+
+
+
+
         
+             
         #print("{}".format(dump))
         fileObject.write(dump)
         fileObject.write('\n')
+
+    def packetCount(self):
+        if self.__isBidirectional:
+            return len(self.__forward) + len(self.__backward)
+        else:
+            return len(self.__forward)
+
     
-
-
-

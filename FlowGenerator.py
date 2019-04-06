@@ -17,13 +17,14 @@ class FlowGenerator:
         bidirectional,
         flowTimeout,
         activityTimeout,
+        output_file_object
         ):
         self.__bidirectional = bidirectional
         self.__flowTimeout = flowTimeout
         self.__activityTimeout = activityTimeout
         self.init()
         self.__header = 0
-        self.fileObject = open("myfile.csv","w")
+        self.__fileObject = output_file_object
 
 
     def init(self):
@@ -39,7 +40,7 @@ class FlowGenerator:
         if self.__header == 0:
             self.__header = 1
             test = BasicFlow(self.__bidirectional,packetInfo)
-            test.dumpFileHeadings(',',self.fileObject)
+            test.dumpFileHeadings(',',self.__fileObject)
 
 
         currentTimestamp = packetInfo.getTimestamp()
@@ -55,7 +56,7 @@ class FlowGenerator:
                         # extra shit
 
                 print ('Flow time out')
-                self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures(",",self.fileObject)
+                self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures(",",self.__fileObject)
                 del self.__currentFlows[packetInfo.getFlowId()]
                 self.__currentFlows[packetInfo.getFlowId()] =  BasicFlow(self.__bidirectional,packetInfo, flow.getSrc(),flow.getDst(),flow.getSrcPort(), flow.getDstPort())
             elif packetInfo.hasFlagFIN():
@@ -66,7 +67,7 @@ class FlowGenerator:
                 #print ('Flow finished')
 
                 flow.addPacket(packetInfo)
-                self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures(",",self.fileObject)
+                self.__currentFlows[packetInfo.getFlowId()].dumpFlowBasedFeatures(",",self.__fileObject)
                 del self.__currentFlows[packetInfo.getFlowId()]
             else:
 
@@ -88,7 +89,7 @@ class FlowGenerator:
         print("A total of {}".format(self.__flowCount))
         
         for (key, val) in self.__currentFlows.items():           
-            val.dumpFlowBasedFeatures(',', self.fileObject)
+            val.dumpFlowBasedFeatures(',', self.__fileObject)
             #if count == 5:
             #    break 
 

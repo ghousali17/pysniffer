@@ -2,6 +2,7 @@
 import pcap
 import sys
 import socket
+import os
 from Sniffer import Sniffer
 from BasicPacketInfo import BasicPacketInfo
 from BasicFlow import BasicFlow
@@ -13,11 +14,17 @@ from struct import *
 
 class FlowMeter():
 
+	def __init__(self, input_file,output_file_object,flowTimeout, activityTimeout):
+		self.__input_file= input_file
+		self.__output_file_object = output_file_object
+		self.__flow_timeout = flowTimeout
+		self.__activity_timeout = activityTimeout
+
 	def capture_file(self):
 		flow_log = {}
 		count = 0
 		#flowGen = new FlowGenerator(true,120000000L, 5000000L);
-		flowGen = FlowGenerator(True,120000000, 5000000)
+		flowGen = FlowGenerator(True,self.__flow_timeout, self.__activity_timeout, self.__output_file_object)
 		flowProc = FlowProcessor()
 		ip6count = 0
 		ip4count = 0
@@ -28,7 +35,7 @@ class FlowMeter():
 		preprocess = Sniffer(10)
 		packetInfo = None
 		header = 0 
-		sniffer = pcap.pcap(name='6.pcap', promisc=True, immediate=True,timeout_ms=12000000000)
+		sniffer = pcap.pcap(name=self.__input_file, promisc=True, immediate=True,timeout_ms=12000000000)
 
 	# initialises address structure helps in printing
 		addr = lambda pkt, offset: ':'.join(str(ord(pkt[i])) for i in
@@ -77,5 +84,79 @@ class FlowMeter():
 		print('Weird packets:' + str(weirdcount))
 		print('Total packets:' + str(count))
 
-flowmeter = FlowMeter()
-flowmeter.capture_file()
+def main():
+	arg_err_main = 'Invalid argument'
+	arg_err_live = 'Invalid argument for live capture'
+	arg_err_offline = 'Invalid argument for pcap reading'
+	print('Input length:')
+	print(len(sys.argv))
+	print(sys.argv[0])
+	if(len(sys.argv)) <= 1:
+		print(arg_err_string)
+	else:
+		if sys.argv[1] == '-l':
+			print('Live capture mode!')
+			if len(sys.argv) != 3:
+				print(arg_err_live)
+			else: 
+				print('starting live capture')
+		elif sys.argv[1] == '-p':
+			if len(sys.argv) != 4:
+				print(arg_err_offline)
+			else: 
+				if not os.path.exists(sys.argv[2]):
+					print('directory does not exist')
+				else:
+					try:
+
+						os.makedirs(sys.argv[3])
+						files = []
+						#makes list of all files in input directory! 
+						for r, d, f in os.walk(sys.argv[2]):
+							for file in f:
+								if '.pcap' in file:
+									files.append(file)
+
+						print('starting offline capture:')
+						print('[{}] pcap files to be processed:'.format(len(files)))
+						for file in files:
+							print(file)
+
+						#loop to iterate all input files inside the input directory!
+						for file in files:
+							inputfile = os.path.join(sys.argv[2], file)
+							csv_file = os.path.splitext(file)[0] + ".csv"
+							outputfile = os.path.join(sys.argv[3], csv_file)
+							try:
+								output_file_object= open(outputfile,"w")
+								flowmeter = FlowMeter(inputfile,output_file_object, 120000000,5000000 )
+								flowmeter.capture_file()
+								output_file_object.close()
+							except IOError:
+								print('Could not open file:[{}]'.format(outputfile));
+
+
+
+							
+
+				
+
+					except FileExistsError:
+						print('Error: output directory [{}] already exists.'.format(sys.argv[3]))
+						pass
+
+
+
+		else:
+			print(arg_err_main)
+
+
+
+
+
+
+	
+
+main()
+#flowmeter = FlowMeter()
+#flowmeter.capture_file()
