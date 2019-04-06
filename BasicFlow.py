@@ -10,7 +10,7 @@ import time
 
 class BasicFlow:
 
-    Act_data_pkt_backward = 0
+    
 
     def __init__(self, *args):
         self.__count = 1
@@ -18,10 +18,13 @@ class BasicFlow:
         # non-static
         #bidirectional, packetInfo, flowSrc = None, flowDst = None, flowSrcPort = None, flowDstPort= None
         #direction none function remaining!
-        self.__min_seg_size_forward = -1
+
+        self.__min_seg_size_forward = None
         self.__Act_data_pkt_forward = 0
+        self.__Act_data_pkt_backward = 0
         self.__Init_Win_bytes_forward = -1
         self.__Init_Win_bytes_backward = -1
+
 
         if len(args) == 1:
             self.initParameters()
@@ -188,7 +191,7 @@ class BasicFlow:
                     self.__min_seg_size_forward = packetInfo.getHeaderBytes()
 
             else:
-                #print('Reverse met!')
+                # Reverse direction 
                 self.__bwdPktStats.addValue(packetInfo.getPayloadBytes())
                 self.__Init_Win_bytes_backward = packetInfo.getTCPWindow()
                 self.__bHeaderBytes += packetInfo.getHeaderBytes()
@@ -526,6 +529,8 @@ class BasicFlow:
         dump += sep
         dump += 'Dst Port'
         dump += sep
+        dump += 'Protocol'
+        dump += sep
         dump += 'Timestamp'
         dump += sep
         dump += 'Flow Duration'
@@ -710,7 +715,7 @@ class BasicFlow:
 
 
     def dumpFlowBasedFeatures(self,sep,fileObject):
-        print('Dumping flow!')
+        
         dump = ""
         dump += str(self.__flowId)
         dump += sep 
@@ -723,6 +728,8 @@ class BasicFlow:
             dump += sep
             dump += str(self.getDstPort())
             dump += sep
+            dump += str(self.__protocol)
+            dump += sep
         else:
             dump += socket.inet_ntoa(self.__src)
             dump += sep
@@ -731,6 +738,8 @@ class BasicFlow:
             dump += str(socket.inet_ntoa(self.__dst))
             dump += sep
             dump += str(self.getDstPort())
+            dump += sep
+            dump += str(self.__protocol)
             dump += sep
         
         dump += str(datetime.utcfromtimestamp(self.__flowStartTime/1000000).strftime('%Y-%m-%d %H:%M:%S'))
@@ -784,10 +793,19 @@ class BasicFlow:
             dump += str("0")
             dump += sep
 
-        dump += " " #str((self.__forwardBytes + self.__backwardBytes)/(self.getFlowDuration()/1000000))
-        dump += sep
-        dump += " " #str((self.__bwdPktStats.getCount()+self.__fwdPktStats.getCount())/(self.getFlowDuration()/1000000))
-        dump += sep
+        #my stuff
+        if self.getFlowDuration()/1000000 <= 0.0:
+            dump += str("0")
+            dump += sep
+            dump += str("0")
+            dump += sep
+        else:
+            dump += str((self.__forwardBytes + self.__backwardBytes)/(self.getFlowDuration()/1000000))
+            dump += sep
+            dump += str((self.__bwdPktStats.getCount()+self.__fwdPktStats.getCount())/(self.getFlowDuration()/1000000))
+            dump += sep
+
+
         dump += str(self.__flowIAT.getMean()) 
         dump += sep
         dump += str(self.__flowIAT.getStandardDeviation())

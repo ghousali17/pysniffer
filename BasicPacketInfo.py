@@ -46,10 +46,13 @@ class BasicPacketInfo:
 
     # Additional details (3/3)
 
-        self.__TCPWindow = -0x01
+        self.__TCPWindow = -1
         self.__headerBytes = 0
         self.__payloadPacket = 0
         #Work fine i think 
+    
+
+
     def generateFlowId(self):
         forward = True
         print('Length src:')
@@ -211,7 +214,7 @@ class BasicPacketInfo:
         self.__flagRST = True
 
     def getTCPWindow(self):
-        self.__TCPWindow
+        return self.__TCPWindow
 
     def setTCPWindow(self, TCPWindow):
         self.__TCPWindow = TCPWindow

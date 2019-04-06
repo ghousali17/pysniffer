@@ -112,9 +112,11 @@ public class BasicFlow {
 	
 	
 	public void firstPacket(BasicPacketInfo packet){
+		
 		updateFlowBulk(packet);
 		detectUpdateSubflows(packet);
 		checkFlags(packet);
+		
 		this.flowStartTime = packet.getTimeStamp();
 		this.flowLastSeen = packet.getTimeStamp();
 		this.startActiveTime = packet.getTimeStamp();

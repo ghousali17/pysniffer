@@ -43,7 +43,8 @@ class FlowProcessor:
             packetInfo.setTCPWindow(tcph[6])
             packetInfo.setFlags(tcph[5])
             packetInfo.setPayloadBytes(segmentLength)
-            packetInfo.setHeaderBytes(segmentHeaderLength)          
+            packetInfo.setHeaderBytes(segmentHeaderLength)
+
         elif protocol == 17:
             udp_hdr = pkt[pktHeaderLength:pktHeaderLength + 8]
             udph = unpack('!HHHH', udp_hdr)
@@ -80,6 +81,7 @@ class FlowProcessor:
                     ts,
                     1,
                     )
+
             packetInfo.setTCPWindow(tcph[6])
             packetInfo.setFlags(tcph[5])
             packetInfo.setPayloadBytes(segmentLength)
